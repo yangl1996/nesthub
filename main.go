@@ -10,6 +10,7 @@ import (
 	"context"
 	"log"
 	"time"
+	"sync"
 )
 
 const (
@@ -42,18 +43,34 @@ func main() {
 	source := config.TokenSource(ctx, &token)
 	s, err := sdm.NewService(ctx, option.WithTokenSource(source))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
+	
+	// list the devices
 	resp, err := s.Enterprises.Devices.List("enterprises/"+c.SDMProjectID).Do()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
-	log.Println("retrieved", len(resp.Devices), "devices")
+	log.Println("Retrieved", len(resp.Devices), "devices")
+	if len(resp.Devices) > 1 {
+		log.Fatalln("Do not support multiple devices for now")
+	}
+	// FIXME: I'm being lazy here by only supporting one device and not checking
+	// the type of the device. Works for me now.
+	dn := resp.Devices[0].Name
+	log.Println("Controlling device", dn)
+	e := &DeviceEndpoint {
+		Service: s,
+		Name: dn,
+		Mutex: &sync.Mutex{},
+	}
 
-	temp := 20.0
-	cel := true
-	targets := Auto
-	currents := Heat
+	// try to get the current temperature
+	res, err := e.GetDevice()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("Current device state:", res)
 
 	// init the bridge device
 	info := accessory.Info{
@@ -75,26 +92,59 @@ func main() {
 	// Reported values must always be in Celsius
 	// Another good reference of all those stuff is
 	// https://github.com/brutella/hc/blob/master/gen/metadata.json
+	
+	// helper function to report error
+	getDevice := func() DeviceTraits {
+		r, err := e.GetDevice()
+		if err != nil {
+			log.Println(err)
+		}
+		return r
+	}
 	svc.TargetTemperature.OnValueRemoteGet(func() float64 {
-		return temp
+		// depends on the set mode
+		r := getDevice()
+		switch r.SetMode.Mode {
+			case "OFF": return 0
+			case "HEAT": return r.SetTemp.HeatCelsius
+			case "COOL": return r.SetTemp.CoolCelsius
+			case "HEATCOOL": return (r.SetTemp.HeatCelsius + r.SetTemp.CoolCelsius) / 2.0
+		}
+		panic("unreachable target temp")
+		return 0
 	})
 	svc.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
-		temp = n
+		r := getDevice()
+		var err error
+		switch r.SetMode.Mode {
+			case "OFF": err = nil
+			case "HEAT": err = e.SetHeat(n)
+			case "COOL": err = e.SetCool(n)
+			case "HEATCOOL": err = e.SetHeatCool(n-2.5, n+2.5)
+		}
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		log.Println("temp set to", n)
 		return
 	})
 
 	svc.CurrentTemperature.OnValueRemoteGet(func() float64 {
-		return temp + 1.5
+		return getDevice().CurrTemp.TempCelsius
 	})
 
 	svc.TemperatureDisplayUnits.OnValueRemoteGet(func() int {
-		if cel == true {
-			return 0
-		} else {
-			return 1
+		unit := getDevice().DisplayUnit.Unit
+		switch unit {
+		case "CELSIUS": return 0
+		case "FAHRENHEIT": return 1
 		}
+		panic("unreachable unit")
+		return 0
 	})
+	/*
+	// SDM does not support changing the display unit
 	svc.TemperatureDisplayUnits.OnValueRemoteUpdate(func(n int) {
 		if n == 0 {
 			cel = true
@@ -104,18 +154,45 @@ func main() {
 		log.Println("unit set to", n)
 		return
 	})
+	*/
 
 	svc.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
-		return targets
+		r := getDevice()
+		switch r.SetMode.Mode {
+			case "OFF": return 0
+			case "HEAT": return 1
+			case "COOL": return 2
+			case "HEATCOOL": return 3
+		}
+		panic("unreachable target mode")
+		return 0
 	})
 	svc.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
-		targets = n
+		var s string
+		switch n {
+			case 0: s = "OFF"
+			case 1: s = "HEAT"
+			case 2: s = "COOL"
+			case 3: s = "HEATCOOL"
+		}
+		err := e.SetMode(s)
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		log.Println("target mode set to", n)
 		return
 	})
 
 	svc.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
-		return currents
+		mode := getDevice().CurrMode.Status
+		switch mode {
+		case "OFF": return 0
+		case "HEATING": return 1
+		case "COOLING": return 2
+		}
+		panic("unreachable current mode")
+		return 0
 	})
 
 	// add the service to the bridge
@@ -123,7 +200,7 @@ func main() {
 
 	t, err := hc.NewIPTransport(hc.Config{Pin: "77887788"}, acc.Accessory)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
 
 	hc.OnTermination(func() {
