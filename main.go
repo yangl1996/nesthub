@@ -1,6 +1,7 @@
 package main
 
 import (
+	"golang.org/x/oauth2"
 	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
 	"github.com/brutella/hc/service"
@@ -9,6 +10,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 )
 
 const (
@@ -21,11 +23,29 @@ const (
 func main() {
 	projID := os.Getenv("NEST_PROJECT_ID")
 	ctx := context.Background()
-	s, err := sdm.NewService(ctx, option.WithCredentialsFile("./credentials.json"))
+
+	// get the oauth2 token
+	config := oauth2.Config {
+		ClientID: "9779670944-3lvn9q08gqih9b3scbrcpvef42lgvkg8.apps.googleusercontent.com",
+		ClientSecret: "iXWrA0vjywPL9Xpyqw2Rxd-C",
+		Endpoint: oauth2.Endpoint {
+			TokenURL: "https://oauth2.googleapis.com/token",
+			AuthURL: "https://accounts.google.com/o/oauth2/auth",
+		},
+		RedirectURL: "https://www.google.com",
+	}
+	token := oauth2.Token {
+		AccessToken: "ya29.a0AfH6SMA9LKIehYhq0rop6JgjMTsGClRPt5ln0KNbi3SBvl_GaO1q6VjQFKCL6WPcHBIsi1RKRxWe7lGGLJlM4qQj5Da-8QmyvtfHwX4MO6Ziu-fupPgnHziZ8tif0Q9mPsYsAGSupLUtg_MfJTGGQa6xjiCL2XGLcZT09ayubEs",
+		TokenType: "Bearer",
+		RefreshToken: "1//0dXCgw0Zg0ZShCgYIARAAGA0SNwF-L9IrZDP8IaUiZWtedJfRqn59szI6r_rdnmniOxMEI7EpPvpyBjRV2uEF5xK5IA0PIUHKzVg",
+		Expiry: time.Date(2009, 1, 1, 12, 0, 0, 0, time.UTC),
+	}
+	source := config.TokenSource(ctx, &token)
+	s, err := sdm.NewService(ctx, option.WithTokenSource(source))
 	if err != nil {
 		log.Fatal(err)
 	}
-	resp, err := s.Enterprises.Devices.List(projID).Do()
+	resp, err := s.Enterprises.Devices.List("enterprises/"+projID).Do()
 	if err != nil {
 		log.Fatal(err)
 	}

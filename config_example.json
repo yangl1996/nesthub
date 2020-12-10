@@ -1,0 +1,7 @@
+{
+    "SDMProjectID": "your project id shown in the SDM console",
+    "OAuthClientID": "oauth client id created in GCP and set in SDM console",
+    "OAuthClientSecret": "oauth client secret created in GCP",
+    "AccessToken": "oauth access token obtained in the initial token request",
+    "RefreshToken": "oauth refresh token obtained in the initial token request"
+}
