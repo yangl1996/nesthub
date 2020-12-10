@@ -4,16 +4,12 @@ import (
 	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
 	"github.com/brutella/hc/service"
+	sdm "google.golang.org/api/smartdevicemanagement/v1"
+	"google.golang.org/api/option"
+	"context"
 	"log"
+	"os"
 )
-
-func turnLightOn() {
-	log.Println("Turn Light On")
-}
-
-func turnLightOff() {
-	log.Println("Turn Light Off")
-}
 
 const (
 	Off = iota
@@ -22,8 +18,19 @@ const (
 	Auto
 )
 
-
 func main() {
+	projID := os.Getenv("NEST_PROJECT_ID")
+	ctx := context.Background()
+	s, err := sdm.NewService(ctx, option.WithCredentialsFile("./credentials.json"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp, err := s.Enterprises.Devices.List(projID).Do()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("retrieved", len(resp.Devices), "devices")
+
 	temp := 20.0
 	cel := true
 	targets := Auto
