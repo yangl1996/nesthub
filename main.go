@@ -31,7 +31,7 @@ func main() {
 
 	// init the bridge device
 	info := accessory.Info{
-		Name:         "NestHub",
+		Name:         "Nest Hub",
 		Manufacturer: "Lei Yang",
 	}
 	acc := accessory.NewBridge(info)
