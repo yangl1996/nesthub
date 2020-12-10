@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-struct Config {
+type Config struct {
 	SDMProjectID string		// the project ID shown in the SDM console
 	OAuthClientID string	// the oauth client ID created in GCP and set in SDM project
 	OAuthClientSecret string	// the oauth client secret created in GCP

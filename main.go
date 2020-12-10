@@ -9,7 +9,6 @@ import (
 	"google.golang.org/api/option"
 	"context"
 	"log"
-	"os"
 	"time"
 )
 
@@ -21,13 +20,13 @@ const (
 )
 
 func main() {
-	projID := os.Getenv("NEST_PROJECT_ID")
+	c, err := parse("config.json")
 	ctx := context.Background()
 
 	// get the oauth2 token
 	config := oauth2.Config {
-		ClientID: "9779670944-3lvn9q08gqih9b3scbrcpvef42lgvkg8.apps.googleusercontent.com",
-		ClientSecret: "iXWrA0vjywPL9Xpyqw2Rxd-C",
+		ClientID: c.OAuthClientID,
+		ClientSecret: c.OAuthClientSecret,
 		Endpoint: oauth2.Endpoint {
 			TokenURL: "https://oauth2.googleapis.com/token",
 			AuthURL: "https://accounts.google.com/o/oauth2/auth",
@@ -35,9 +34,9 @@ func main() {
 		RedirectURL: "https://www.google.com",
 	}
 	token := oauth2.Token {
-		AccessToken: "ya29.a0AfH6SMA9LKIehYhq0rop6JgjMTsGClRPt5ln0KNbi3SBvl_GaO1q6VjQFKCL6WPcHBIsi1RKRxWe7lGGLJlM4qQj5Da-8QmyvtfHwX4MO6Ziu-fupPgnHziZ8tif0Q9mPsYsAGSupLUtg_MfJTGGQa6xjiCL2XGLcZT09ayubEs",
+		AccessToken: c.AccessToken,
 		TokenType: "Bearer",
-		RefreshToken: "1//0dXCgw0Zg0ZShCgYIARAAGA0SNwF-L9IrZDP8IaUiZWtedJfRqn59szI6r_rdnmniOxMEI7EpPvpyBjRV2uEF5xK5IA0PIUHKzVg",
+		RefreshToken: c.RefreshToken,
 		Expiry: time.Date(2009, 1, 1, 12, 0, 0, 0, time.UTC),
 	}
 	source := config.TokenSource(ctx, &token)
@@ -45,7 +44,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	resp, err := s.Enterprises.Devices.List("enterprises/"+projID).Do()
+	resp, err := s.Enterprises.Devices.List("enterprises/"+c.SDMProjectID).Do()
 	if err != nil {
 		log.Fatal(err)
 	}
