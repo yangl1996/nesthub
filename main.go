@@ -49,24 +49,14 @@ func main() {
 		// depends on the set mode
 		return e.TargetTemp()
 	})
-	/*
+
 	svc.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
-		r := getDevice()
-		var err error
-		switch r.SetMode.Mode {
-			case "OFF": err = nil
-			case "HEAT": err = e.SetHeat(n)
-			case "COOL": err = e.SetCool(n)
-			case "HEATCOOL": err = e.SetHeatCool(n-2.5, n+2.5)
-		}
+		err := e.SetTargetTemp(n)
 		if err != nil {
 			log.Println(err)
-			return
 		}
-		log.Println("temp set to", n)
 		return
 	})
-	*/
 
 	svc.CurrentTemperature.OnValueRemoteGet(func() float64 {
 		return e.CurrentTemp()
@@ -84,24 +74,14 @@ func main() {
 	svc.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
 		return e.TargetMode()
 	})
-	/*
+
 	svc.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
-		var s string
-		switch n {
-			case 0: s = "OFF"
-			case 1: s = "HEAT"
-			case 2: s = "COOL"
-			case 3: s = "HEATCOOL"
-		}
-		err := e.SetMode(s)
+		err := e.SetTargetMode(n)
 		if err != nil {
 			log.Println(err)
-			return
 		}
-		log.Println("target mode set to", n)
 		return
 	})
-	*/
 
 	svc.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
 		return e.CurrentHVACMode()

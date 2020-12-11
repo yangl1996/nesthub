@@ -14,6 +14,13 @@ How Nesthub is different from HomeBridge:
 
 - Google SDM API requires a one-time fee of $5. Shame on you, Google!
 - No fancy UI. Probably only for someone who knows how to work the command line.
+- Setup is somewhat complicated.
+
+Highlights on the system design:
+
++ Uses SDM pubsub event stream. No active polling of the SDM API.
+    + Does not hit the ridiculously low API rate limit.
++ Device state query (e.g. check temperature) is entirely local. (Low latency.)
 
 This project uses hc for a pure-go implementation of the HomeKit Accessory
 Protocol. hc is authored by Matthias Hochgatterer and other contributors.

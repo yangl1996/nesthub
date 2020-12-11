@@ -140,6 +140,57 @@ func (d *EmulatedDevice) TargetMode() int {
 	}
 }
 
+func (d *EmulatedDevice) SetTargetMode(n int) error {
+	var s string
+	switch n {
+		case 0: s = "OFF"
+		case 1: s = "HEAT"
+		case 2: s = "COOL"
+		case 3: s = "HEATCOOL"
+		default: panic("unreachable target mode enumeration")
+	}
+	err := d.SetMode(s)
+	if err != nil {
+		return err
+	}
+	d.Lock()
+	defer d.Unlock()
+	d.state.SetMode.Mode = s
+	d.state.SetMode.Timestamp = time.Now()
+	return nil
+}
+
+func (d *EmulatedDevice) SetTargetTemp(t float64) error {
+	var err error
+	switch d.state.SetMode.Mode {
+		case "OFF": err = nil
+		case "HEAT": err = d.SetHeat(t)
+		case "COOL": err = d.SetCool(t)
+		case "HEATCOOL": err = d.SetHeatCool(t-2.5, t+2.5)
+		default: panic("unreachable target mode when setting target temp")
+	}
+	if err != nil {
+		return err
+	}
+	d.Lock()
+	defer d.Unlock()
+	switch d.state.SetMode.Mode {
+		case "HEAT":
+			d.state.SetTemp.HeatCelsius = t
+			d.state.SetTemp.HeatTimestamp = time.Now()
+		case "COOL":
+			d.state.SetTemp.CoolCelsius = t
+			d.state.SetTemp.CoolTimestamp = time.Now()
+		case "HEATCOOL":
+			d.state.SetTemp.HeatCelsius = t - 2.5
+			d.state.SetTemp.CoolCelsius = t + 2.5
+			d.state.SetTemp.HeatTimestamp = time.Now()
+			d.state.SetTemp.CoolTimestamp = time.Now()
+		default: return nil	// don't update timestamp for the OFF case
+	}
+	return nil
+}
+
 func (d *EmulatedDevice) DisplayUnit() int {
 	d.Lock()
 	defer d.Unlock()
