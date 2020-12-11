@@ -65,6 +65,8 @@ func main() {
 		Mutex: &sync.Mutex{},
 	}
 
+	ListenEvents(c.GCPProjectID, c.PubSubID, c.ServiceAccountKey)
+
 	// try to get the current temperature
 	res, err := e.GetDevice()
 	if err != nil {

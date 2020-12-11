@@ -2,3 +2,4 @@ nesthub
 config.json
 *.swp
 Nest Hub
+credential.json
