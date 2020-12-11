@@ -3,17 +3,11 @@ package main
 import (
 	sdm "google.golang.org/api/smartdevicemanagement/v1"
 	"encoding/json"
-	"time"
-	"log"
-	"sync"
 )
 
 type DeviceEndpoint struct {
-	*sync.Mutex
 	*sdm.Service
 	Name string
-	cached DeviceTraits	// FIXME: we should use pubsub instead
-	cacheExpiry time.Time
 }
 
 type DeviceTraits struct {
@@ -36,14 +30,6 @@ type DeviceTraits struct {
 }
 
 func (d *DeviceEndpoint) GetDevice() (DeviceTraits, error) {
-	d.Lock()
-	defer d.Unlock()
-	// see if we should return the cached info
-	if !time.Now().After(d.cacheExpiry) {
-		return d.cached, nil
-	}
-	log.Println("current time", time.Now(), "expiry", d.cacheExpiry)
-	log.Println("GetDevice queried")
 	res, err := d.Enterprises.Devices.Get(d.Name).Do()
 	var r DeviceTraits
 	if err != nil {
@@ -54,8 +40,6 @@ func (d *DeviceEndpoint) GetDevice() (DeviceTraits, error) {
 	if err != nil {
 		return r, err
 	}
-	d.cached = r
-	d.cacheExpiry = time.Now().Add(time.Minute * time.Duration(5))
 
 	return r, nil
 }
@@ -79,8 +63,6 @@ func (d *DeviceEndpoint) SetMode(mode string) error {
 	if err != nil {
 		return err
 	}
-	// invalidate the cache
-	d.cacheExpiry = time.Date(2009, 1, 1, 12, 0, 0, 0, time.UTC)
 	return nil
 }
 
@@ -103,8 +85,6 @@ func (d *DeviceEndpoint) SetHeat(temp float64) error {
 	if err != nil {
 		return err
 	}
-	// invalidate the cache
-	d.cacheExpiry = time.Date(2009, 1, 1, 12, 0, 0, 0, time.UTC)
 	return nil
 }
 
@@ -127,8 +107,6 @@ func (d *DeviceEndpoint) SetCool(temp float64) error {
 	if err != nil {
 		return err
 	}
-	// invalidate the cache
-	d.cacheExpiry = time.Date(2009, 1, 1, 12, 0, 0, 0, time.UTC)
 	return nil
 }
 
@@ -153,7 +131,5 @@ func (d *DeviceEndpoint) SetHeatCool(heat, cool float64) error {
 	if err != nil {
 		return err
 	}
-	// invalidate the cache
-	d.cacheExpiry = time.Date(2009, 1, 1, 12, 0, 0, 0, time.UTC)
 	return nil
 }
