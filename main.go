@@ -44,13 +44,13 @@ func main() {
 	// Reported values must always be in Celsius
 	// Another good reference of all those stuff is
 	// https://github.com/brutella/hc/blob/master/gen/metadata.json
-	
 	svc.TargetTemperature.OnValueRemoteGet(func() float64 {
 		// depends on the set mode
 		return e.TargetTemp()
 	})
 
 	svc.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
+		log.Println("Request: set target temp to", n)
 		err := e.SetTargetTemp(n)
 		if err != nil {
 			log.Println(err)
@@ -76,6 +76,7 @@ func main() {
 	})
 
 	svc.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
+		log.Println("Request: set target mode to", n)
 		err := e.SetTargetMode(n)
 		if err != nil {
 			log.Println(err)

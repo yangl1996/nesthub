@@ -155,6 +155,7 @@ func (d *EmulatedDevice) SetTargetMode(n int) error {
 	}
 	d.Lock()
 	defer d.Unlock()
+	log.Println("Setting target mode to", s)
 	d.state.SetMode.Mode = s
 	d.state.SetMode.Timestamp = time.Now()
 	return nil
@@ -174,6 +175,7 @@ func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	}
 	d.Lock()
 	defer d.Unlock()
+	log.Println("Setting target temp to", t)
 	switch d.state.SetMode.Mode {
 		case "HEAT":
 			d.state.SetTemp.HeatCelsius = t
