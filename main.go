@@ -21,15 +21,9 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	e.ListenEvents()
+	log.Println("Device emulation started")
 
 	// try to get the current temperature
-	res, err := e.GetDevice()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.Println("Current device state:", res)
-
 	// init the bridge device
 	info := accessory.Info{
 		Name:         "Nest Hub",
@@ -51,26 +45,11 @@ func main() {
 	// Another good reference of all those stuff is
 	// https://github.com/brutella/hc/blob/master/gen/metadata.json
 	
-	// helper function to report error
-	getDevice := func() DeviceTraits {
-		r, err := e.GetDevice()
-		if err != nil {
-			log.Println(err)
-		}
-		return r
-	}
 	svc.TargetTemperature.OnValueRemoteGet(func() float64 {
 		// depends on the set mode
-		r := getDevice()
-		switch r.SetMode.Mode {
-			case "OFF": return 0
-			case "HEAT": return r.SetTemp.HeatCelsius
-			case "COOL": return r.SetTemp.CoolCelsius
-			case "HEATCOOL": return (r.SetTemp.HeatCelsius + r.SetTemp.CoolCelsius) / 2.0
-		}
-		panic("unreachable target temp")
-		return 0
+		return e.TargetTemp()
 	})
+	/*
 	svc.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
 		r := getDevice()
 		var err error
@@ -87,44 +66,25 @@ func main() {
 		log.Println("temp set to", n)
 		return
 	})
+	*/
 
 	svc.CurrentTemperature.OnValueRemoteGet(func() float64 {
-		return getDevice().CurrTemp.TempCelsius
+		return e.CurrentTemp()
 	})
 
 	svc.TemperatureDisplayUnits.OnValueRemoteGet(func() int {
-		unit := getDevice().DisplayUnit.Unit
-		switch unit {
-		case "CELSIUS": return 0
-		case "FAHRENHEIT": return 1
-		}
-		panic("unreachable unit")
-		return 0
+		return e.DisplayUnit()
 	})
 	/*
 	// SDM does not support changing the display unit
 	svc.TemperatureDisplayUnits.OnValueRemoteUpdate(func(n int) {
-		if n == 0 {
-			cel = true
-		} else {
-			cel = false
-		}
-		log.Println("unit set to", n)
-		return
 	})
 	*/
 
 	svc.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
-		r := getDevice()
-		switch r.SetMode.Mode {
-			case "OFF": return 0
-			case "HEAT": return 1
-			case "COOL": return 2
-			case "HEATCOOL": return 3
-		}
-		panic("unreachable target mode")
-		return 0
+		return e.TargetMode()
 	})
+	/*
 	svc.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
 		var s string
 		switch n {
@@ -141,16 +101,10 @@ func main() {
 		log.Println("target mode set to", n)
 		return
 	})
+	*/
 
 	svc.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
-		mode := getDevice().CurrMode.Status
-		switch mode {
-		case "OFF": return 0
-		case "HEATING": return 1
-		case "COOLING": return 2
-		}
-		panic("unreachable current mode")
-		return 0
+		return e.CurrentHVACMode()
 	})
 
 	// add the service to the bridge

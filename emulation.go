@@ -26,6 +26,7 @@ type EmulatedDevice struct {
 	state DeviceTraits
 }
 
+
 func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
 	ctx := context.Background()
 
@@ -93,6 +94,61 @@ func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
 	}
 
 	return e, nil
+}
+
+func (d *EmulatedDevice) CurrentTemp() float64 {
+	d.Lock()
+	defer d.Unlock()
+	return d.state.CurrTemp.TempCelsius
+}
+
+func (d *EmulatedDevice) TargetTemp() float64 {
+	d.Lock()
+	defer d.Unlock()
+	mode := d.state.SetMode.Mode
+	switch mode {
+		case "OFF": return 0
+		case "HEAT": return d.state.SetTemp.HeatCelsius
+		case "COOL": return d.state.SetTemp.CoolCelsius
+		case "HEATCOOL": return (d.state.SetTemp.HeatCelsius + d.state.SetTemp.CoolCelsius) / 2.0
+		default: panic("unreachable set mode when querying target temp")
+	}
+}
+
+func (d *EmulatedDevice) CurrentHVACMode() int {
+	d.Lock()
+	defer d.Unlock()
+	mode := d.state.CurrMode.Status
+	switch mode {
+		case "OFF": return 0
+		case "HEATING": return 1
+		case "COOLING": return 2
+		default: panic("unreachable current mode")
+	}
+}
+
+func (d *EmulatedDevice) TargetMode() int {
+	d.Lock()
+	defer d.Unlock()
+	mode := d.state.SetMode.Mode
+	switch mode {
+		case "OFF": return 0
+		case "HEAT": return 1
+		case "COOL": return 2
+		case "HEATCOOL": return 3
+		default: panic("unreachable set mode")
+	}
+}
+
+func (d *EmulatedDevice) DisplayUnit() int {
+	d.Lock()
+	defer d.Unlock()
+	unit := d.state.DisplayUnit.Unit
+	switch unit {
+		case "CELSIUS": return 0
+		case "FAHRENHEIT": return 1
+		default: panic("unreachable unit")
+	}
 }
 
 func (d *EmulatedDevice) ListenEvents() error {
