@@ -3,6 +3,7 @@ package main
 import (
 	sdm "google.golang.org/api/smartdevicemanagement/v1"
 	"encoding/json"
+	"time"
 )
 
 type DeviceEndpoint struct {
@@ -13,19 +14,25 @@ type DeviceEndpoint struct {
 type DeviceTraits struct {
 	CurrMode struct {
 		Status string
+		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.ThermostatHvac"`
 	SetMode struct {
 		Mode string
+		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.ThermostatMode"`
 	SetTemp struct {
 		HeatCelsius float64
 		CoolCelsius float64
+		HeatTimestamp time.Time `json:"-"`
+		CoolTimestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.ThermostatTemperatureSetpoint"`
 	CurrTemp struct {
 		TempCelsius float64 `json:"ambientTemperatureCelsius"`
+		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.Temperature"`
 	DisplayUnit struct {
 		Unit string `json:"temperatureScale"`
+		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.Settings"`
 }
 
