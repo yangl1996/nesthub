@@ -22,6 +22,8 @@ Highlights on the system design:
     + Does not hit the ridiculously low API rate limit.
 + Device state query (e.g. check temperature) is entirely local. (Low latency.)
 
+Acknowledgements:
+
 This project uses hc for a pure-go implementation of the HomeKit Accessory
 Protocol. hc is authored by Matthias Hochgatterer and other contributors.
 

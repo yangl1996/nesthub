@@ -16,6 +16,11 @@ const (
 
 func main() {
 	c, err := parse("config.json")
+	err = setup(c.GCPProjectID, c.ServiceAccountKey)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return
 
 	e, err := NewEmulatedDevice(c)
 	if err != nil {
