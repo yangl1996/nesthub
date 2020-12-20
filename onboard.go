@@ -2,6 +2,7 @@ package main
 
 import (
 	"google.golang.org/api/option"
+	//"cloud.google.com/go/pubsub"
 	"encoding/json"
 	su "google.golang.org/api/serviceusage/v1"
 	"log"
@@ -91,7 +92,35 @@ func setup(config Config) error {
 	if err != nil {
 		return err
 	}
+
+	/*
 	// create a pubsub
+	pc, err := pubsub.NewClient(ctx, config.GCPProjectID, option.WithCredentialsFile(config.ServiceAccountKey))
+	if err != nil {
+		return err
+	}
+	sub := pc.Subscription("homebridge-pubsub")
+	subThere, err := sub.Exists(ctx)
+	if err != nil {
+		return err
+	}
+	if subThere == true {
+		err = sub.Delete(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = pc.CreateSubscription(ctx, "homebridge-pubsub", pubsub.SubscriptionConfig{
+		// nest pubsub topics are of format projects/sdm-prod/topics/enterprise-<SDM project ID>
+		Topic:            pc.TopicInProject("enterprise-"+config.SDMProjectID, "sdm-prod"),
+		AckDeadline:      10 * time.Second,
+		ExpirationPolicy: 1 * time.Hour,
+	})
+	if err != nil {
+		return err
+	}
+	log.Println("Pubsub subscription created")
+	*/
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/brutella/hc/accessory"
 	"github.com/brutella/hc/service"
 	"log"
+	"flag"
 )
 
 const (
@@ -15,15 +16,20 @@ const (
 )
 
 func main() {
+	doSetupFlag := flag.Bool("setup", false, "go through the setup routine")
+	flag.Parse()
+
 	c, err := parse("config.json")
 	if err != nil {
 		log.Fatalln(err)
 	}
-	err = setup(c)
-	if err != nil {
-		log.Fatalln(err)
+
+	if *doSetupFlag {
+		err = setup(c)
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
-	return
 
 	e, err := NewEmulatedDevice(c)
 	if err != nil {

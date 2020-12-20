@@ -13,7 +13,6 @@ type Config struct {
 	OAuthClientSecret string	// the oauth client secret created in GCP
 	GCPProjectID string	// the project ID shown in the GCP console
 	ServiceAccountKey string // credentials of the service account of GCP project
-	PubSubID string // subscription ID of the pubsub topic
 	OAuthToken string  // path to the oauth token
 }
 

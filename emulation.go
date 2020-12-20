@@ -64,7 +64,7 @@ func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
 	if err != nil {
 		return nil, err
 	}
-	sub := pc.Subscription(c.PubSubID)
+	sub := pc.Subscription("homebridge-pubsub")
 
 	// initialize the structure
 	e := &EmulatedDevice{
@@ -74,7 +74,12 @@ func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
 	}
 
 	// start updating the states through pubsub
-	go e.ListenEvents()
+	go func() {
+		err := e.ListenEvents()
+		if err != nil {
+			log.Println(err)
+		}
+	}()
 
 	// query the API once to get the initial traits
 	err = e.ForceUpdate()
