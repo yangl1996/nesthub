@@ -11,10 +11,55 @@ How Nesthub is different from HomeBridge:
 + The program simply runs in the foreground. No background service to manage.
     + Although you could write your own systemd service/init script.
 + Uses the official Google Smart Device Management API. Not a single hack here.
+    + Much easier setup than HomeBridge.
 
 - Google SDM API requires a one-time fee of $5. Shame on you, Google!
 - No fancy UI. Probably only for someone who knows how to work the command line.
-- Setup is somewhat complicated.
+
+How to set up:
+
+1. Go to https://console.nest.google.com/device-access to register for the SDM
+   API. You need to pay a one-time fee of $5 to Google in this step.
+2. Create a Google Cloud Platform project in Google Cloud Console.
+3. Create an OAuth 2.0 client.
+   3.1 Go to https://console.cloud.google.com/apis/credentials, click "CREATE
+       CREDENTIALS" and choose OAuth Client ID.
+   3.2 It is likely that you will need to first configure the consent screen.
+       Select "External" and click "Create". Fill in App name. Fill in user
+       support email and Developer contact email (at the end of the form) with
+       your email address. "Save and continue" through the remaining steps.
+       After "Back to dashboard", click "Publish".
+   3.3 Go back to https://console.cloud.google.com/apis/credentials, click
+       "CREATE CREDENTIALS" and choose OAuth Client ID.
+   3.4 Choose "Web application" as the application type. Add
+       "http://localhost:7979" as redirect URI at the bottom of the page.
+   3.5 Copy and save the client ID and the client secret.
+4. Create a Smart Device Management project.
+   4.1 Go to https://console.nest.google.com/device-access and click Create.
+   4.2 Fill in the project name and click Next.
+   4.3 Fill in the OAuth client ID you got in step 3.5
+   4.4 Enable Events, and click Create project.
+5. Create a service account for the GCP project.
+   5.1 Go to https://console.cloud.google.com/apis/credentials, click "CREATE
+       CREDENTIALS" and choose Service account
+   5.2 Choose a service account name you like, and click CREATE.
+   5.3 Choose "Owner" as the role of the account. Click CONTINUE.
+   5.4 Click "DONE".
+   5.5 Click the three dots under "Actions", and Create key. Choose JSON.
+   5.6 Save the key securely. It will be used later.
+6. Prepare the config file. Copy config_example.json to config.json.
+   6.1 For "SDMProjectID", use the Project ID shown in the Device Access
+       Console. Go to https://console.nest.google.com/device-access and choose
+       the project you just created.
+   6.2 For "GCPProjectID", use the Project ID shown in the Google Cloud Platform
+       Console. Go to https://console.cloud.google.com and choose your project.
+   6.3 For "OAuthClientID" and "OAuthClientSecret", use the ID and secret you
+       obtained in step 3.5.
+   6.4 For "ServiceAccountKey", set it to the path to the Service Account key
+       file you downloaded in step 5.6.
+   6.5 For "PubSubID", go to https://console.nest.google.com/device-access,
+       choose your project, and look for "Pub/Sub topic".
+7. Finish OAuth authorization.
 
 Highlights on the system design:
 
