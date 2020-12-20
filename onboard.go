@@ -2,12 +2,14 @@ package main
 
 import (
 	"google.golang.org/api/option"
+	"encoding/json"
 	su "google.golang.org/api/serviceusage/v1"
 	"log"
 	"context"
 	"errors"
 	"time"
 	"os/exec"
+	"io/ioutil"
 	"net/http"
 	"fmt"
 	"sync"
@@ -74,7 +76,22 @@ func setup(config Config) error {
 	if err := srv.Shutdown(context.Background()); err != nil {
 		return err
 	}
-	log.Println("Authorization successful. Key=", authCode)
+	log.Println("Authorization successful.", authCode)
+	// exchange to obtain the token
+	oauthConfig := config.oauthConfig()
+	token, err := oauthConfig.Exchange(ctx, authCode)
+	if err != nil {
+		return err
+	}
+	tokenJson, err := json.Marshal(token)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(config.OAuthToken, tokenJson, 0644)
+	if err != nil {
+		return err
+	}
+	// create a pubsub
 
 	return nil
 }

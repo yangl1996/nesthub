@@ -3,8 +3,7 @@
     "GCPProjectID": "your project id shown in the GCP console",
     "OAuthClientID": "oauth client id created in GCP and set in SDM console",
     "OAuthClientSecret": "oauth client secret created in GCP",
-    "AccessToken": "oauth access token obtained in the initial token request",
-    "RefreshToken": "oauth refresh token obtained in the initial token request",
-    "ServiceAccountKey": "credential of the GCP service account",
-    "PubSubID": "cloud pubsub subscribe id"
+    "ServiceAccountKey": "path to credential of the GCP service account",
+    "PubSubID": "cloud pubsub subscribe id",
+    "OAuthToken": "path to store oauth token"
 }

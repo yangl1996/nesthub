@@ -2,7 +2,6 @@ package main
 
 import (
 	"cloud.google.com/go/pubsub"
-	"golang.org/x/oauth2"
 	sdm "google.golang.org/api/smartdevicemanagement/v1"
 	"google.golang.org/api/option"
 	"context"
@@ -31,20 +30,10 @@ func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
 	ctx := context.Background()
 
 	// get the oauth2 token
-	config := oauth2.Config {
-		ClientID: c.OAuthClientID,
-		ClientSecret: c.OAuthClientSecret,
-		Endpoint: oauth2.Endpoint {
-			TokenURL: "https://oauth2.googleapis.com/token",
-			AuthURL: "https://accounts.google.com/o/oauth2/auth",
-		},
-		RedirectURL: "https://www.google.com",
-	}
-	token := oauth2.Token {
-		AccessToken: c.AccessToken,
-		TokenType: "Bearer",
-		RefreshToken: c.RefreshToken,
-		Expiry: time.Date(2009, 1, 1, 12, 0, 0, 0, time.UTC),
+	config := c.oauthConfig()
+	token, err := c.oauthToken()
+	if err != nil {
+		return nil, err
 	}
 	source := config.TokenSource(ctx, &token)
 	s, err := sdm.NewService(ctx, option.WithTokenSource(source))
