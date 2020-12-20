@@ -1,6 +1,10 @@
+# Nesthub
+
 Nesthub is a bridge between Nest thermostats and Apple HomeKit.
 
-How Nesthub is different from HomeBridge:
+## How Nesthub is different from HomeBridge
+
+Pros: 
 
 + Written in pure Golang.
     + Easy cross compilation. Compile on your Mac and deploy on a Raspberry Pi!
@@ -13,10 +17,12 @@ How Nesthub is different from HomeBridge:
 + Uses the official Google Smart Device Management API. Not a single hack here.
     + Much easier setup than HomeBridge.
 
+Cons: 
+
 - Google SDM API requires a one-time fee of $5. Shame on you, Google!
 - No fancy UI. Probably only for someone who knows how to work the command line.
 
-How to set up:
+## How to set it up
 
 1. Go to https://console.nest.google.com/device-access to register for the SDM
    API. You need to pay a one-time fee of $5 to Google in this step.
@@ -82,13 +88,13 @@ How to set up:
        "I Don't Have a Code or Cannot Scan". Wait for the bridge to appear, and
        use code "77887788" to pair.
 
-Highlights on the system design:
+## Highlights on the system design
 
 + Uses SDM pubsub event stream. No active polling of the SDM API.
     + Does not hit the ridiculously low API rate limit.
 + Device state query (e.g. check temperature) is entirely local. (Low latency.)
 
-Acknowledgements:
+## Acknowledgements
 
 This project uses hc for a pure-go implementation of the HomeKit Accessory
 Protocol. hc is authored by Matthias Hochgatterer and other contributors.
