@@ -52,7 +52,8 @@ How to set up:
        shell button on the top right corner.
    6.2 Execute "gcloud pubsub subscriptions create homebridge-pubsub
        --topic=projects/sdm-prod/topics/<Project ID>". Here, <Project ID>
-       is the SDM project ID shown in the Device Access Console.
+       is the SDM project ID shown in the Device Access Console. Go to
+       https://console.nest.google.com/device-access to look it up.
 7. Prepare the config file. Copy config_example.json to config.json.
    7.1 For "SDMProjectID", use the Project ID shown in the Device Access
        Console. Go to https://console.nest.google.com/device-access and choose
@@ -77,6 +78,9 @@ How to set up:
    8.4 After the web page is redirected and prompts you to go back to Terminal,
        switch back to Terminal.
    8.5 The app should be running now.
+   8.6 Go to Home app on your iPhone. Click "+". Click "Add Accessory". Click
+       "I Don't Have a Code or Cannot Scan". Wait for the bridge to appear, and
+       use code "77887788" to pair.
 
 Highlights on the system design:
 
