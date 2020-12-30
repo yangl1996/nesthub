@@ -24,8 +24,8 @@ Cons:
 
 ## How to set it up
 
-1. Go to https://console.nest.google.com/device-access to register for the SDM
-   API. You need to pay a one-time fee of $5 to Google in this step.
+1. Go to Google's [Smart Device Access page](https://console.nest.google.com/device-access) to register for the SDM
+   API. You need to pay an one-time fee of $5 to Google in this step.
 2. Create a Google Cloud Platform project in Google Cloud Console.
 3. Create an OAuth 2.0 client.
    1. Go to https://console.cloud.google.com/apis/credentials, click "CREATE CREDENTIALS" and choose OAuth Client ID.
@@ -55,8 +55,8 @@ Cons:
 6. Create Pubsub subscription.
    1. Go to https://console.cloud.google.com, select your project. Click the
        shell button on the top right corner.
-   2. Execute "gcloud pubsub subscriptions create homebridge-pubsub
-       --topic=projects/sdm-prod/topics/<Project ID>". Here, <Project ID>
+   2. Execute `gcloud pubsub subscriptions create homebridge-pubsub
+       --topic=projects/sdm-prod/topics/<Project ID>`. Here, `<Project ID>`
        is the SDM project ID shown in the Device Access Console. Go to
        https://console.nest.google.com/device-access to look it up.
 7. Prepare the config file. Copy config_example.json to config.json.
