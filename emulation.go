@@ -111,6 +111,8 @@ func (d *EmulatedDevice) SetupHandlers() {
 	// https://github.com/brutella/hc/blob/master/gen/metadata.json
 	d.TargetTemperature.OnValueRemoteGet(func() float64 {
 		// depends on the set mode
+		d.Lock()
+		defer d.Unlock()
 		return d.TargetTemp()
 	})
 
@@ -124,10 +126,14 @@ func (d *EmulatedDevice) SetupHandlers() {
 	})
 
 	d.CurrentTemperature.OnValueRemoteGet(func() float64 {
+		d.Lock()
+		defer d.Unlock()
 		return d.CurrentTemp()
 	})
 
 	d.TemperatureDisplayUnits.OnValueRemoteGet(func() int {
+		d.Lock()
+		defer d.Unlock()
 		return d.DisplayUnit()
 	})
 	/*
@@ -137,6 +143,8 @@ func (d *EmulatedDevice) SetupHandlers() {
 	*/
 
 	d.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
+		d.Lock()
+		defer d.Unlock()
 		return d.TargetMode()
 	})
 
@@ -150,19 +158,17 @@ func (d *EmulatedDevice) SetupHandlers() {
 	})
 
 	d.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
+		d.Lock()
+		defer d.Unlock()
 		return d.CurrentHVACMode()
 	})
 }
 
 func (d *EmulatedDevice) CurrentTemp() float64 {
-	d.Lock()
-	defer d.Unlock()
 	return d.state.CurrTemp.TempCelsius
 }
 
 func (d *EmulatedDevice) TargetTemp() float64 {
-	d.Lock()
-	defer d.Unlock()
 	mode := d.state.SetMode.Mode
 	switch mode {
 		case "OFF": return 0
@@ -174,8 +180,6 @@ func (d *EmulatedDevice) TargetTemp() float64 {
 }
 
 func (d *EmulatedDevice) CurrentHVACMode() int {
-	d.Lock()
-	defer d.Unlock()
 	mode := d.state.CurrMode.Status
 	switch mode {
 		case "OFF": return 0
@@ -186,8 +190,6 @@ func (d *EmulatedDevice) CurrentHVACMode() int {
 }
 
 func (d *EmulatedDevice) TargetMode() int {
-	d.Lock()
-	defer d.Unlock()
 	mode := d.state.SetMode.Mode
 	switch mode {
 		case "OFF": return 0
@@ -252,8 +254,6 @@ func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 }
 
 func (d *EmulatedDevice) DisplayUnit() int {
-	d.Lock()
-	defer d.Unlock()
 	unit := d.state.DisplayUnit.Unit
 	switch unit {
 		case "CELSIUS": return 0
