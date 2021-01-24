@@ -297,31 +297,37 @@ func (d *EmulatedDevice) UpdateTraits(t PubsubUpdate) {
 	if t.ResourceUpdate.Traits.CurrMode.Status != "" && ts.After(d.state.CurrMode.Timestamp) {
 		d.state.CurrMode.Status = t.ResourceUpdate.Traits.CurrMode.Status
 		d.state.CurrMode.Timestamp = ts
+		d.CurrentHeatingCoolingState.SetValue(d.CurrentHVACMode())
 		log.Println("Current mode updated to", d.state.CurrMode.Status)
 	}
 	if t.ResourceUpdate.Traits.SetMode.Mode != "" && ts.After(d.state.SetMode.Timestamp) {
 		d.state.SetMode.Mode = t.ResourceUpdate.Traits.SetMode.Mode
 		d.state.SetMode.Timestamp = ts
+		d.TargetHeatingCoolingState.SetValue(d.TargetMode())
 		log.Println("Set mode updated to", d.state.SetMode.Mode)
 	}
 	if t.ResourceUpdate.Traits.SetTemp.HeatCelsius != 0 && ts.After(d.state.SetTemp.HeatTimestamp) {
 		d.state.SetTemp.HeatCelsius = t.ResourceUpdate.Traits.SetTemp.HeatCelsius
 		d.state.SetTemp.HeatTimestamp = ts
+		d.TargetTemperature.SetValue(d.TargetTemp())
 		log.Println("Set heat temperature updated to", d.state.SetTemp.HeatCelsius)
 	}
 	if t.ResourceUpdate.Traits.SetTemp.CoolCelsius != 0 && ts.After(d.state.SetTemp.CoolTimestamp) {
 		d.state.SetTemp.CoolCelsius = t.ResourceUpdate.Traits.SetTemp.CoolCelsius
 		d.state.SetTemp.CoolTimestamp = ts
+		d.TargetTemperature.SetValue(d.TargetTemp())
 		log.Println("Set cool temperature updated to", d.state.SetTemp.CoolCelsius)
 	}
 	if t.ResourceUpdate.Traits.CurrTemp.TempCelsius != 0 && ts.After(d.state.CurrTemp.Timestamp) {
 		d.state.CurrTemp.TempCelsius = t.ResourceUpdate.Traits.CurrTemp.TempCelsius
 		d.state.CurrTemp.Timestamp = ts
+		d.CurrentTemperature.SetValue(d.CurrentTemp())
 		log.Println("Current temperature updated to", d.state.CurrTemp.TempCelsius)
 	}
 	if t.ResourceUpdate.Traits.DisplayUnit.Unit != "" && ts.After(d.state.DisplayUnit.Timestamp) {
 		d.state.DisplayUnit.Unit = t.ResourceUpdate.Traits.DisplayUnit.Unit
 		d.state.DisplayUnit.Timestamp = ts
+		d.TemperatureDisplayUnits.SetValue(d.DisplayUnit())
 		log.Println("Display unit updated to", d.state.DisplayUnit.Unit)
 	}
 }
