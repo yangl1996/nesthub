@@ -14,6 +14,8 @@ type Config struct {
 	GCPProjectID string	// the project ID shown in the GCP console
 	ServiceAccountKey string // credentials of the service account of GCP project
 	OAuthToken string  // path to the oauth token
+	HubName string // name of the hub
+	PairingCode string // 8 digits of pairing code
 }
 
 func parse(path string) (Config, error) {

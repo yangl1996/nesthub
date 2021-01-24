@@ -41,15 +41,15 @@ func main() {
 	// try to get the current temperature
 	// init the bridge device
 	info := accessory.Info{
-		Name:         "Nest Hub",
-		Manufacturer: "Lei Yang",
+		Name:         c.HubName,
+		Manufacturer: "leiy",
 	}
 	acc := accessory.NewBridge(info)
 
 	// add the service to the bridge
 	acc.AddService(svc.Service)
 
-	t, err := hc.NewIPTransport(hc.Config{Pin: "77887788"}, acc.Accessory)
+	t, err := hc.NewIPTransport(hc.Config{Pin: c.PairingCode}, acc.Accessory)
 	if err != nil {
 		log.Fatalln(err)
 	}

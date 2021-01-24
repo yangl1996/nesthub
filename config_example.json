@@ -4,5 +4,7 @@
     "OAuthClientID": "oauth client id created in GCP and set in SDM console",
     "OAuthClientSecret": "oauth client secret created in GCP",
     "ServiceAccountKey": "path to credential of the GCP service account",
-    "OAuthToken": "path to store oauth token"
+    "OAuthToken": "path to store oauth token",
+    "HubName": "Name of the hub",
+    "PairingCode": "8 digits of pairing code"
 }
