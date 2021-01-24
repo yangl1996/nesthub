@@ -5,6 +5,6 @@ package main
 import "fmt"
 
 func openURL(u string) error {
-	fmt.Println("Please open", authURL, "in browser")
+	fmt.Println("Please open", u, "in browser")
 	return nil
 }
