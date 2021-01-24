@@ -56,7 +56,7 @@ Cons:
    1. Go to https://console.cloud.google.com, select your project. Click the
        shell button on the top right corner.
    2. Execute `gcloud pubsub subscriptions create homebridge-pubsub
-       --topic=projects/sdm-prod/topics/<Project ID>`. Here, `<Project ID>`
+       --topic=projects/sdm-prod/topics/enterprise-<Project ID>`. Here, `<Project ID>`
        is the SDM project ID shown in the Device Access Console. Go to
        https://console.nest.google.com/device-access to look it up.
 7. Prepare the config file. Copy config_example.json to config.json.
