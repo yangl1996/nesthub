@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"time"
-	"os/exec"
 	"io/ioutil"
 	"net/http"
 	"fmt"
@@ -71,7 +70,7 @@ func setup(config Config) error {
     http.HandleFunc("/", handler)
     go srv.ListenAndServe()
 	// let the user login
-	err = exec.Command("open", authURL).Start()
+	err = openURL(authURL)
 	// wait for authorization to finish
 	authDone.Wait()
 	if err := srv.Shutdown(context.Background()); err != nil {
