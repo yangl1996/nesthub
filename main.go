@@ -32,7 +32,7 @@ func main() {
 	}
 
 	svc := service.NewThermostat()
-	e, err := NewEmulatedDevice(svc, c)
+	_, err = NewEmulatedDevice(svc, c)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -45,62 +45,6 @@ func main() {
 		Manufacturer: "Lei Yang",
 	}
 	acc := accessory.NewBridge(info)
-	// init the thermostat service
-
-	// set the characteristics
-	// Celsius is 0, Fahrenheit is 1
-	// https://developer.apple.com/documentation/homekit/hmcharacteristicvaluetemperatureunit
-	// Off is 0, Heat is 1, Cool is 2, Auto is 3
-	// https://developer.apple.com/documentation/homekit/hmcharacteristicvalueheatingcooling
-	// Note that TargetHeatingCoolingState can be 0-3, but CurrentHeatingCoolingState
-	// can only be 0-2, because "Auto" is not an actual state.
-	// https://github.com/homebridge/HAP-NodeJS/issues/815
-	// Reported values must always be in Celsius
-	// Another good reference of all those stuff is
-	// https://github.com/brutella/hc/blob/master/gen/metadata.json
-	svc.TargetTemperature.OnValueRemoteGet(func() float64 {
-		// depends on the set mode
-		return e.TargetTemp()
-	})
-
-	svc.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
-		log.Println("Request: set target temp to", n)
-		err := e.SetTargetTemp(n)
-		if err != nil {
-			log.Println(err)
-		}
-		return
-	})
-
-	svc.CurrentTemperature.OnValueRemoteGet(func() float64 {
-		return e.CurrentTemp()
-	})
-
-	svc.TemperatureDisplayUnits.OnValueRemoteGet(func() int {
-		return e.DisplayUnit()
-	})
-	/*
-	// SDM does not support changing the display unit
-	svc.TemperatureDisplayUnits.OnValueRemoteUpdate(func(n int) {
-	})
-	*/
-
-	svc.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
-		return e.TargetMode()
-	})
-
-	svc.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
-		log.Println("Request: set target mode to", n)
-		err := e.SetTargetMode(n)
-		if err != nil {
-			log.Println(err)
-		}
-		return
-	})
-
-	svc.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
-		return e.CurrentHVACMode()
-	})
 
 	// add the service to the bridge
 	acc.AddService(svc.Service)
