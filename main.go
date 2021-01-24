@@ -31,7 +31,8 @@ func main() {
 		}
 	}
 
-	e, err := NewEmulatedDevice(c)
+	svc := service.NewThermostat()
+	e, err := NewEmulatedDevice(svc, c)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -45,7 +46,6 @@ func main() {
 	}
 	acc := accessory.NewBridge(info)
 	// init the thermostat service
-	svc := service.NewThermostat()
 
 	// set the characteristics
 	// Celsius is 0, Fahrenheit is 1

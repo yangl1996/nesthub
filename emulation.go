@@ -9,6 +9,7 @@ import (
 	"log"
 	"time"
 	"sync"
+	"github.com/brutella/hc/service"
 )
 
 type PubsubUpdate struct {
@@ -23,10 +24,11 @@ type EmulatedDevice struct {
 	sub *pubsub.Subscription
 	*sync.Mutex
 	state DeviceTraits
+	*service.Thermostat
 }
 
 
-func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
+func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error) {
 	ctx := context.Background()
 
 	// get the oauth2 token
@@ -71,6 +73,7 @@ func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
 		sub: sub,
 		Mutex: &sync.Mutex{},
 		DeviceEndpoint: de,
+		Thermostat: t,
 	}
 
 	// start updating the states through pubsub
@@ -87,7 +90,68 @@ func NewEmulatedDevice(c Config) (*EmulatedDevice, error) {
 		return nil, err
 	}
 
+	e.SetupHandlers()
+
 	return e, nil
+}
+
+func (d *EmulatedDevice) SetupHandlers() {
+	// init the thermostat service
+
+	// set the characteristics
+	// Celsius is 0, Fahrenheit is 1
+	// https://developer.appld.com/documentation/homekit/hmcharacteristicvaluetemperatureunit
+	// Off is 0, Heat is 1, Cool is 2, Auto is 3
+	// https://developer.appld.com/documentation/homekit/hmcharacteristicvalueheatingcooling
+	// Note that TargetHeatingCoolingState can be 0-3, but CurrentHeatingCoolingState
+	// can only be 0-2, because "Auto" is not an actual statd.
+	// https://github.com/homebridge/HAP-NodeJS/issues/815
+	// Reported values must always be in Celsius
+	// Another good reference of all those stuff is
+	// https://github.com/brutella/hc/blob/master/gen/metadata.json
+	d.TargetTemperature.OnValueRemoteGet(func() float64 {
+		// depends on the set mode
+		return d.TargetTemp()
+	})
+
+	d.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
+		log.Println("Request: set target temp to", n)
+		err := d.SetTargetTemp(n)
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	})
+
+	d.CurrentTemperature.OnValueRemoteGet(func() float64 {
+		return d.CurrentTemp()
+	})
+
+	d.TemperatureDisplayUnits.OnValueRemoteGet(func() int {
+		return d.DisplayUnit()
+	})
+	/*
+	// SDM does not support changing the display unit
+	d.TemperatureDisplayUnits.OnValueRemoteUpdate(func(n int) {
+	})
+	*/
+
+	d.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
+		return d.TargetMode()
+	})
+
+	d.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
+		log.Println("Request: set target mode to", n)
+		err := d.SetTargetMode(n)
+		if err != nil {
+			log.Println(err)
+		}
+		return
+	})
+
+	d.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
+		return d.CurrentHVACMode()
+	})
 }
 
 func (d *EmulatedDevice) CurrentTemp() float64 {
