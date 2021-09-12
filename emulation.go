@@ -1,19 +1,20 @@
 package main
 
 import (
-	"cloud.google.com/go/pubsub"
-	sdm "google.golang.org/api/smartdevicemanagement/v1"
-	"google.golang.org/api/option"
 	"context"
 	"encoding/json"
 	"log"
-	"time"
 	"sync"
+	"time"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/brutella/hc/service"
+	"google.golang.org/api/option"
+	sdm "google.golang.org/api/smartdevicemanagement/v1"
 )
 
 type PubsubUpdate struct {
-	Timestamp time.Time
+	Timestamp      time.Time
 	ResourceUpdate struct {
 		Traits DeviceTraits
 	}
@@ -26,7 +27,6 @@ type EmulatedDevice struct {
 	state DeviceTraits
 	*service.Thermostat
 }
-
 
 func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error) {
 	ctx := context.Background()
@@ -44,7 +44,7 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 	}
 
 	// list the devices
-	resp, err := s.Enterprises.Devices.List("enterprises/"+c.SDMProjectID).Do()
+	resp, err := s.Enterprises.Devices.List("enterprises/" + c.SDMProjectID).Do()
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +56,9 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 	// the type of the device. Works for me now.
 	dn := resp.Devices[0].Name
 	log.Println("Controlling device", dn)
-	de := &DeviceEndpoint {
+	de := &DeviceEndpoint{
 		Service: s,
-		Name: dn,
+		Name:    dn,
 	}
 
 	// create pubsub client and subscription
@@ -70,10 +70,10 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 
 	// initialize the structure
 	e := &EmulatedDevice{
-		sub: sub,
-		Mutex: &sync.Mutex{},
+		sub:            sub,
+		Mutex:          &sync.Mutex{},
 		DeviceEndpoint: de,
-		Thermostat: t,
+		Thermostat:     t,
 	}
 
 	// start updating the states through pubsub
@@ -122,7 +122,6 @@ func (d *EmulatedDevice) SetupHandlers() {
 		if err != nil {
 			log.Println(err)
 		}
-		return
 	})
 
 	d.CurrentTemperature.OnValueRemoteGet(func() float64 {
@@ -137,9 +136,9 @@ func (d *EmulatedDevice) SetupHandlers() {
 		return d.DisplayUnit()
 	})
 	/*
-	// SDM does not support changing the display unit
-	d.TemperatureDisplayUnits.OnValueRemoteUpdate(func(n int) {
-	})
+		// SDM does not support changing the display unit
+		d.TemperatureDisplayUnits.OnValueRemoteUpdate(func(n int) {
+		})
 	*/
 
 	d.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
@@ -154,7 +153,6 @@ func (d *EmulatedDevice) SetupHandlers() {
 		if err != nil {
 			log.Println(err)
 		}
-		return
 	})
 
 	d.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
@@ -171,43 +169,62 @@ func (d *EmulatedDevice) CurrentTemp() float64 {
 func (d *EmulatedDevice) TargetTemp() float64 {
 	mode := d.state.SetMode.Mode
 	switch mode {
-		case "OFF": return 0
-		case "HEAT": return d.state.SetTemp.HeatCelsius
-		case "COOL": return d.state.SetTemp.CoolCelsius
-		case "HEATCOOL": return (d.state.SetTemp.HeatCelsius + d.state.SetTemp.CoolCelsius) / 2.0
-		default: panic("unreachable set mode when querying target temp")
+	case "OFF":
+		return 0
+	case "HEAT":
+		return d.state.SetTemp.HeatCelsius
+	case "COOL":
+		return d.state.SetTemp.CoolCelsius
+	case "HEATCOOL":
+		return (d.state.SetTemp.HeatCelsius + d.state.SetTemp.CoolCelsius) / 2.0
+	default:
+		panic("unreachable set mode when querying target temp")
 	}
 }
 
 func (d *EmulatedDevice) CurrentHVACMode() int {
 	mode := d.state.CurrMode.Status
 	switch mode {
-		case "OFF": return 0
-		case "HEATING": return 1
-		case "COOLING": return 2
-		default: panic("unreachable current mode")
+	case "OFF":
+		return 0
+	case "HEATING":
+		return 1
+	case "COOLING":
+		return 2
+	default:
+		panic("unreachable current mode")
 	}
 }
 
 func (d *EmulatedDevice) TargetMode() int {
 	mode := d.state.SetMode.Mode
 	switch mode {
-		case "OFF": return 0
-		case "HEAT": return 1
-		case "COOL": return 2
-		case "HEATCOOL": return 3
-		default: panic("unreachable set mode")
+	case "OFF":
+		return 0
+	case "HEAT":
+		return 1
+	case "COOL":
+		return 2
+	case "HEATCOOL":
+		return 3
+	default:
+		panic("unreachable set mode")
 	}
 }
 
 func (d *EmulatedDevice) SetTargetMode(n int) error {
 	var s string
 	switch n {
-		case 0: s = "OFF"
-		case 1: s = "HEAT"
-		case 2: s = "COOL"
-		case 3: s = "HEATCOOL"
-		default: panic("unreachable target mode enumeration")
+	case 0:
+		s = "OFF"
+	case 1:
+		s = "HEAT"
+	case 2:
+		s = "COOL"
+	case 3:
+		s = "HEATCOOL"
+	default:
+		panic("unreachable target mode enumeration")
 	}
 	err := d.SetMode(s)
 	if err != nil {
@@ -224,11 +241,16 @@ func (d *EmulatedDevice) SetTargetMode(n int) error {
 func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	var err error
 	switch d.state.SetMode.Mode {
-		case "OFF": err = nil
-		case "HEAT": err = d.SetHeat(t)
-		case "COOL": err = d.SetCool(t)
-		case "HEATCOOL": err = d.SetHeatCool(t-2.5, t+2.5)
-		default: panic("unreachable target mode when setting target temp")
+	case "OFF":
+		err = nil
+	case "HEAT":
+		err = d.SetHeat(t)
+	case "COOL":
+		err = d.SetCool(t)
+	case "HEATCOOL":
+		err = d.SetHeatCool(t-2.5, t+2.5)
+	default:
+		panic("unreachable target mode when setting target temp")
 	}
 	if err != nil {
 		return err
@@ -237,18 +259,19 @@ func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	defer d.Unlock()
 	log.Println("Setting target temp to", t)
 	switch d.state.SetMode.Mode {
-		case "HEAT":
-			d.state.SetTemp.HeatCelsius = t
-			d.state.SetTemp.HeatTimestamp = time.Now()
-		case "COOL":
-			d.state.SetTemp.CoolCelsius = t
-			d.state.SetTemp.CoolTimestamp = time.Now()
-		case "HEATCOOL":
-			d.state.SetTemp.HeatCelsius = t - 2.5
-			d.state.SetTemp.CoolCelsius = t + 2.5
-			d.state.SetTemp.HeatTimestamp = time.Now()
-			d.state.SetTemp.CoolTimestamp = time.Now()
-		default: return nil	// don't update timestamp for the OFF case
+	case "HEAT":
+		d.state.SetTemp.HeatCelsius = t
+		d.state.SetTemp.HeatTimestamp = time.Now()
+	case "COOL":
+		d.state.SetTemp.CoolCelsius = t
+		d.state.SetTemp.CoolTimestamp = time.Now()
+	case "HEATCOOL":
+		d.state.SetTemp.HeatCelsius = t - 2.5
+		d.state.SetTemp.CoolCelsius = t + 2.5
+		d.state.SetTemp.HeatTimestamp = time.Now()
+		d.state.SetTemp.CoolTimestamp = time.Now()
+	default:
+		return nil // don't update timestamp for the OFF case
 	}
 	return nil
 }
@@ -256,24 +279,28 @@ func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 func (d *EmulatedDevice) DisplayUnit() int {
 	unit := d.state.DisplayUnit.Unit
 	switch unit {
-		case "CELSIUS": return 0
-		case "FAHRENHEIT": return 1
-		default: panic("unreachable unit")
+	case "CELSIUS":
+		return 0
+	case "FAHRENHEIT":
+		return 1
+	default:
+		panic("unreachable unit")
 	}
 }
 
 func (d *EmulatedDevice) ListenEvents() error {
 	// create a pubsub client
 	ctx := context.Background()
-	for ;; {
+	for {
 		_ = d.sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
 			var update PubsubUpdate
-			json.Unmarshal(m.Data, &update)
+			if err := json.Unmarshal(m.Data, &update); err != nil {
+				log.Println("Error decoding pubsub update:", err)
+			}
 			d.UpdateTraits(update)
 			m.Ack()
 		})
 	}
-	return nil
 }
 
 func (d *EmulatedDevice) ForceUpdate() error {
@@ -283,7 +310,7 @@ func (d *EmulatedDevice) ForceUpdate() error {
 	if err != nil {
 		return err
 	}
-	fakeUpdate := PubsubUpdate {}
+	fakeUpdate := PubsubUpdate{}
 	fakeUpdate.Timestamp = t
 	fakeUpdate.ResourceUpdate.Traits = r
 	d.UpdateTraits(fakeUpdate)

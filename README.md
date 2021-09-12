@@ -1,4 +1,7 @@
 # Nesthub
+![CI](https://github.com/yangl1996/nesthub/workflows/ci/badge.svg?branch=master&event=push)
+[![license](https://img.shields.io/github/license/yangl1996/nesthub.svg)](./LICENSE)
+[![release](https://img.shields.io/github/v/release/yangl1996/nesthub.svg)](https://github.com/yangl1996/nesthub/releases/latest)
 
 Nesthub is a bridge between Nest thermostats and Apple HomeKit.
 

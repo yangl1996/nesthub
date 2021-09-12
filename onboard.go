@@ -1,18 +1,18 @@
 package main
 
 import (
-	"google.golang.org/api/option"
-	//"cloud.google.com/go/pubsub"
-	"encoding/json"
-	su "google.golang.org/api/serviceusage/v1"
-	"log"
 	"context"
+	"encoding/json"
 	"errors"
-	"time"
-	"io/ioutil"
-	"net/http"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"sync"
+	"time"
+
+	"google.golang.org/api/option"
+	su "google.golang.org/api/serviceusage/v1"
 )
 
 func setup(config Config) error {
@@ -24,7 +24,7 @@ func setup(config Config) error {
 		return err
 	}
 	// create the request
-	req := &su.BatchEnableServicesRequest {
+	req := &su.BatchEnableServicesRequest{
 		ServiceIds: []string{"smartdevicemanagement.googleapis.com"},
 	}
 	op, err := s.Services.BatchEnable("projects/"+config.GCPProjectID, req).Do()
@@ -33,8 +33,8 @@ func setup(config Config) error {
 	}
 	opName := op.Name
 	// poll the operation to wait for the result
-	for ;; {
-		if op.Done == true {
+	for {
+		if op.Done {
 			if op.Error == nil {
 				break
 			} else {
@@ -50,7 +50,7 @@ func setup(config Config) error {
 	}
 
 	// assume that the user has already created an oauth 2.0 client ID
-	authURL := "https://nestservices.google.com/partnerconnections/"+config.SDMProjectID+"/auth?redirect_uri=http://localhost:7979&access_type=offline&prompt=consent&client_id="+config.OAuthClientID+"&response_type=code&scope=https://www.googleapis.com/auth/sdm.service"
+	authURL := "https://nestservices.google.com/partnerconnections/" + config.SDMProjectID + "/auth?redirect_uri=http://localhost:7979&access_type=offline&prompt=consent&client_id=" + config.OAuthClientID + "&response_type=code&scope=https://www.googleapis.com/auth/sdm.service"
 	authCode := ""
 	authDone := &sync.WaitGroup{}
 	authDone.Add(1)
@@ -67,10 +67,12 @@ func setup(config Config) error {
 		}
 	}
 	srv := &http.Server{Addr: ":7979"}
-    http.HandleFunc("/", handler)
-    go srv.ListenAndServe()
+	http.HandleFunc("/", handler)
+	go srv.ListenAndServe() //nolint:errcheck
 	// let the user login
-	err = openURL(authURL)
+	if err := openURL(authURL); err != nil {
+		return err
+	}
 	// wait for authorization to finish
 	authDone.Wait()
 	if err := srv.Shutdown(context.Background()); err != nil {
@@ -93,34 +95,33 @@ func setup(config Config) error {
 	}
 
 	/*
-	// create a pubsub
-	pc, err := pubsub.NewClient(ctx, config.GCPProjectID, option.WithCredentialsFile(config.ServiceAccountKey))
-	if err != nil {
-		return err
-	}
-	sub := pc.Subscription("homebridge-pubsub")
-	subThere, err := sub.Exists(ctx)
-	if err != nil {
-		return err
-	}
-	if subThere == true {
-		err = sub.Delete(ctx)
+		// create a pubsub
+		pc, err := pubsub.NewClient(ctx, config.GCPProjectID, option.WithCredentialsFile(config.ServiceAccountKey))
 		if err != nil {
 			return err
 		}
-	}
-	_, err = pc.CreateSubscription(ctx, "homebridge-pubsub", pubsub.SubscriptionConfig{
-		// nest pubsub topics are of format projects/sdm-prod/topics/enterprise-<SDM project ID>
-		Topic:            pc.TopicInProject("enterprise-"+config.SDMProjectID, "sdm-prod"),
-		AckDeadline:      10 * time.Second,
-		ExpirationPolicy: 1 * time.Hour,
-	})
-	if err != nil {
-		return err
-	}
-	log.Println("Pubsub subscription created")
+		sub := pc.Subscription("homebridge-pubsub")
+		subThere, err := sub.Exists(ctx)
+		if err != nil {
+			return err
+		}
+		if subThere == true {
+			err = sub.Delete(ctx)
+			if err != nil {
+				return err
+			}
+		}
+		_, err = pc.CreateSubscription(ctx, "homebridge-pubsub", pubsub.SubscriptionConfig{
+			// nest pubsub topics are of format projects/sdm-prod/topics/enterprise-<SDM project ID>
+			Topic:            pc.TopicInProject("enterprise-"+config.SDMProjectID, "sdm-prod"),
+			AckDeadline:      10 * time.Second,
+			ExpirationPolicy: 1 * time.Hour,
+		})
+		if err != nil {
+			return err
+		}
+		log.Println("Pubsub subscription created")
 	*/
 
 	return nil
 }
-
