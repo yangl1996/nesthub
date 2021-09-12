@@ -92,8 +92,7 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 	}()
 
 	// query the API once to get the initial traits
-	err = e.ForceUpdate()
-	if err != nil {
+	if err := e.ForceUpdate(); err != nil {
 		return nil, err
 	}
 

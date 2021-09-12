@@ -42,8 +42,7 @@ func setup(config Config) error {
 			}
 		} else {
 			time.Sleep(1 * time.Second)
-			op, err = s.Operations.Get(opName).Do()
-			if err != nil {
+			if _, err := s.Operations.Get(opName).Do(); err != nil {
 				return err
 			}
 		}

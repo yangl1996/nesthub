@@ -19,15 +19,13 @@ func main() {
 	}
 
 	if *doSetupFlag {
-		err = setup(c)
-		if err != nil {
+		if err := setup(c); err != nil {
 			log.Fatalln(err)
 		}
 	}
 
 	svc := service.NewThermostat()
-	_, err = NewEmulatedDevice(svc, c)
-	if err != nil {
+	if _, err := NewEmulatedDevice(svc, c); err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("Device emulation started")
