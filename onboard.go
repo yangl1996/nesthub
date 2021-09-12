@@ -89,8 +89,8 @@ func setup(config Config) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(config.OAuthToken, tokenJson, 0644)
-	if err != nil {
+
+	if err := ioutil.WriteFile(config.OAuthToken, tokenJson, 0600); err != nil {
 		return err
 	}
 
