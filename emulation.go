@@ -13,6 +13,13 @@ import (
 	sdm "google.golang.org/api/smartdevicemanagement/v1"
 )
 
+const (
+	OFF      = "OFF"
+	HEAT     = "HEAT"
+	COOL     = "COOL"
+	HEATCOOL = "HEATCOOL"
+)
+
 type PubsubUpdate struct {
 	Timestamp      time.Time
 	ResourceUpdate struct {
@@ -169,13 +176,13 @@ func (d *EmulatedDevice) CurrentTemp() float64 {
 func (d *EmulatedDevice) TargetTemp() float64 {
 	mode := d.state.SetMode.Mode
 	switch mode {
-	case "OFF":
+	case OFF:
 		return 0
-	case "HEAT":
+	case HEAT:
 		return d.state.SetTemp.HeatCelsius
-	case "COOL":
+	case COOL:
 		return d.state.SetTemp.CoolCelsius
-	case "HEATCOOL":
+	case HEATCOOL:
 		return (d.state.SetTemp.HeatCelsius + d.state.SetTemp.CoolCelsius) / 2.0
 	default:
 		panic("unreachable set mode when querying target temp")
@@ -185,7 +192,7 @@ func (d *EmulatedDevice) TargetTemp() float64 {
 func (d *EmulatedDevice) CurrentHVACMode() int {
 	mode := d.state.CurrMode.Status
 	switch mode {
-	case "OFF":
+	case OFF:
 		return 0
 	case "HEATING":
 		return 1
@@ -199,13 +206,13 @@ func (d *EmulatedDevice) CurrentHVACMode() int {
 func (d *EmulatedDevice) TargetMode() int {
 	mode := d.state.SetMode.Mode
 	switch mode {
-	case "OFF":
+	case OFF:
 		return 0
-	case "HEAT":
+	case HEAT:
 		return 1
-	case "COOL":
+	case COOL:
 		return 2
-	case "HEATCOOL":
+	case HEATCOOL:
 		return 3
 	default:
 		panic("unreachable set mode")
@@ -216,13 +223,13 @@ func (d *EmulatedDevice) SetTargetMode(n int) error {
 	var s string
 	switch n {
 	case 0:
-		s = "OFF"
+		s = OFF
 	case 1:
-		s = "HEAT"
+		s = HEAT
 	case 2:
-		s = "COOL"
+		s = COOL
 	case 3:
-		s = "HEATCOOL"
+		s = HEATCOOL
 	default:
 		panic("unreachable target mode enumeration")
 	}
@@ -241,13 +248,13 @@ func (d *EmulatedDevice) SetTargetMode(n int) error {
 func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	var err error
 	switch d.state.SetMode.Mode {
-	case "OFF":
+	case OFF:
 		err = nil
-	case "HEAT":
+	case HEAT:
 		err = d.SetHeat(t)
-	case "COOL":
+	case COOL:
 		err = d.SetCool(t)
-	case "HEATCOOL":
+	case HEATCOOL:
 		err = d.SetHeatCool(t-2.5, t+2.5)
 	default:
 		panic("unreachable target mode when setting target temp")
@@ -259,13 +266,13 @@ func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	defer d.Unlock()
 	log.Println("Setting target temp to", t)
 	switch d.state.SetMode.Mode {
-	case "HEAT":
+	case HEAT:
 		d.state.SetTemp.HeatCelsius = t
 		d.state.SetTemp.HeatTimestamp = time.Now()
-	case "COOL":
+	case COOL:
 		d.state.SetTemp.CoolCelsius = t
 		d.state.SetTemp.CoolTimestamp = time.Now()
-	case "HEATCOOL":
+	case HEATCOOL:
 		d.state.SetTemp.HeatCelsius = t - 2.5
 		d.state.SetTemp.CoolCelsius = t + 2.5
 		d.state.SetTemp.HeatTimestamp = time.Now()
