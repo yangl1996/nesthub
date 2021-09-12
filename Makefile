@@ -1,9 +1,17 @@
+LINTERS := -E gci -E gofmt -E whitespace
+
+all: vendor lint build
+
 vendor:
 	go mod tidy
 
 lint:
-	golangci-lint run
+	golangci-lint run $(LINTERS)
 
 format:
-	gofmt -w .
-	gci -w .
+	golangci-lint run --fix $(LINTERS)
+
+build:
+	go build ./...
+
+.PHONY: all vendor lint format build
