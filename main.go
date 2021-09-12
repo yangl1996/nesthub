@@ -1,11 +1,12 @@
 package main
 
 import (
+	"flag"
+	"log"
+
 	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
 	"github.com/brutella/hc/service"
-	"log"
-	"flag"
 )
 
 const (

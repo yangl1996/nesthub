@@ -1,9 +1,10 @@
 package main
 
 import (
-	sdm "google.golang.org/api/smartdevicemanagement/v1"
 	"encoding/json"
 	"time"
+
+	sdm "google.golang.org/api/smartdevicemanagement/v1"
 )
 
 type DeviceEndpoint struct {
@@ -13,25 +14,25 @@ type DeviceEndpoint struct {
 
 type DeviceTraits struct {
 	CurrMode struct {
-		Status string
+		Status    string
 		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.ThermostatHvac"`
 	SetMode struct {
-		Mode string
+		Mode      string
 		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.ThermostatMode"`
 	SetTemp struct {
-		HeatCelsius float64
-		CoolCelsius float64
+		HeatCelsius   float64
+		CoolCelsius   float64
 		HeatTimestamp time.Time `json:"-"`
 		CoolTimestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.ThermostatTemperatureSetpoint"`
 	CurrTemp struct {
-		TempCelsius float64 `json:"ambientTemperatureCelsius"`
-		Timestamp time.Time `json:"-"`
+		TempCelsius float64   `json:"ambientTemperatureCelsius"`
+		Timestamp   time.Time `json:"-"`
 	} `json:"sdm.devices.traits.Temperature"`
 	DisplayUnit struct {
-		Unit string `json:"temperatureScale"`
+		Unit      string    `json:"temperatureScale"`
 		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.Settings"`
 }
@@ -55,16 +56,16 @@ func (d *DeviceEndpoint) SetMode(mode string) error {
 	type params struct {
 		Mode string `json:"mode"`
 	}
-	p := params {
+	p := params{
 		Mode: mode,
 	}
 	ep, err := json.Marshal(p)
 	if err != nil {
 		return err
 	}
-	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest {
+	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatMode.SetMode",
-		Params: ep,
+		Params:  ep,
 	}
 	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
 	if err != nil {
@@ -77,16 +78,16 @@ func (d *DeviceEndpoint) SetHeat(temp float64) error {
 	type params struct {
 		Temp float64 `json:"heatCelsius"`
 	}
-	p := params {
+	p := params{
 		Temp: temp,
 	}
 	ep, err := json.Marshal(p)
 	if err != nil {
 		return err
 	}
-	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest {
+	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat",
-		Params: ep,
+		Params:  ep,
 	}
 	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
 	if err != nil {
@@ -99,16 +100,16 @@ func (d *DeviceEndpoint) SetCool(temp float64) error {
 	type params struct {
 		Temp float64 `json:"coolCelsius"`
 	}
-	p := params {
+	p := params{
 		Temp: temp,
 	}
 	ep, err := json.Marshal(p)
 	if err != nil {
 		return err
 	}
-	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest {
+	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool",
-		Params: ep,
+		Params:  ep,
 	}
 	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
 	if err != nil {
@@ -122,7 +123,7 @@ func (d *DeviceEndpoint) SetHeatCool(heat, cool float64) error {
 		Heat float64 `json:"heatCelsius"`
 		Cool float64 `json:"coolCelsius"`
 	}
-	p := params {
+	p := params{
 		Heat: heat,
 		Cool: cool,
 	}
@@ -130,9 +131,9 @@ func (d *DeviceEndpoint) SetHeatCool(heat, cool float64) error {
 	if err != nil {
 		return err
 	}
-	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest {
+	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange",
-		Params: ep,
+		Params:  ep,
 	}
 	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
 	if err != nil {
