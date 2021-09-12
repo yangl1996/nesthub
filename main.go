@@ -9,13 +9,6 @@ import (
 	"github.com/brutella/hc/service"
 )
 
-const (
-	Off = iota
-	Heat
-	Cool
-	Auto
-)
-
 func main() {
 	doSetupFlag := flag.Bool("setup", false, "go through the setup routine")
 	flag.Parse()

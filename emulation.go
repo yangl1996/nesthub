@@ -122,7 +122,6 @@ func (d *EmulatedDevice) SetupHandlers() {
 		if err != nil {
 			log.Println(err)
 		}
-		return
 	})
 
 	d.CurrentTemperature.OnValueRemoteGet(func() float64 {
@@ -154,7 +153,6 @@ func (d *EmulatedDevice) SetupHandlers() {
 		if err != nil {
 			log.Println(err)
 		}
-		return
 	})
 
 	d.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
@@ -296,12 +294,13 @@ func (d *EmulatedDevice) ListenEvents() error {
 	for {
 		_ = d.sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
 			var update PubsubUpdate
-			json.Unmarshal(m.Data, &update)
+			if err := json.Unmarshal(m.Data, &update); err != nil {
+				log.Println("Error decoding pubsub update:", err)
+			}
 			d.UpdateTraits(update)
 			m.Ack()
 		})
 	}
-	return nil
 }
 
 func (d *EmulatedDevice) ForceUpdate() error {

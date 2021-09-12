@@ -1,8 +1,6 @@
 package main
 
 import (
-
-	//"cloud.google.com/go/pubsub"
 	"context"
 	"encoding/json"
 	"errors"
@@ -36,7 +34,7 @@ func setup(config Config) error {
 	opName := op.Name
 	// poll the operation to wait for the result
 	for {
-		if op.Done == true {
+		if op.Done {
 			if op.Error == nil {
 				break
 			} else {
@@ -70,9 +68,11 @@ func setup(config Config) error {
 	}
 	srv := &http.Server{Addr: ":7979"}
 	http.HandleFunc("/", handler)
-	go srv.ListenAndServe()
+	go srv.ListenAndServe() //nolint:errcheck
 	// let the user login
-	err = openURL(authURL)
+	if err := openURL(authURL); err != nil {
+		return err
+	}
 	// wait for authorization to finish
 	authDone.Wait()
 	if err := srv.Shutdown(context.Background()); err != nil {
