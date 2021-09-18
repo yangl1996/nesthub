@@ -17,6 +17,7 @@ type Config struct {
 	OAuthToken        string // path to the oauth token
 	HubName           string // name of the hub
 	PairingCode       string // 8 digits of pairing code
+	StoragePath       string // nesthub will store data at this path
 }
 
 func parse(path string) (Config, error) {
