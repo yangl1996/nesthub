@@ -17,6 +17,7 @@ type Config struct {
 	OAuthToken        string // path to the oauth token
 	HubName           string // name of the hub
 	PairingCode       string // 8 digits of pairing code
+	StoragePath       string // nesthub will store data at this path
 }
 
 func parse(path string) (Config, error) {
@@ -30,8 +31,7 @@ func parse(path string) (Config, error) {
 	if err != nil {
 		return c, err
 	}
-	err = json.Unmarshal(b, &c)
-	if err != nil {
+	if err := json.Unmarshal(b, &c); err != nil {
 		return c, err
 	}
 	return c, nil
@@ -62,8 +62,7 @@ func (c Config) oauthToken() (oauth2.Token, error) {
 	if err != nil {
 		return t, err
 	}
-	err = json.Unmarshal(b, &t)
-	if err != nil {
+	if err := json.Unmarshal(b, &t); err != nil {
 		return t, err
 	}
 	return t, nil

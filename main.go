@@ -11,23 +11,27 @@ import (
 
 func main() {
 	doSetupFlag := flag.Bool("setup", false, "go through the setup routine")
+	configPathFlag := flag.String("config", "config.json", "path to the config file")
 	flag.Parse()
 
-	c, err := parse("config.json")
+	configPath := "config.json"
+	if configPathFlag != nil {
+		configPath = *configPathFlag
+	}
+
+	c, err := parse(configPath)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	if *doSetupFlag {
-		err = setup(c)
-		if err != nil {
+		if err := setup(c); err != nil {
 			log.Fatalln(err)
 		}
 	}
 
 	svc := service.NewThermostat()
-	_, err = NewEmulatedDevice(svc, c)
-	if err != nil {
+	if _, err := NewEmulatedDevice(svc, c); err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("Device emulation started")
@@ -42,8 +46,9 @@ func main() {
 
 	// add the service to the bridge
 	acc.AddService(svc.Service)
+	log.Println(c.StoragePath)
 
-	t, err := hc.NewIPTransport(hc.Config{Pin: c.PairingCode}, acc.Accessory)
+	t, err := hc.NewIPTransport(hc.Config{Pin: c.PairingCode, StoragePath: c.StoragePath}, acc.Accessory)
 	if err != nil {
 		log.Fatalln(err)
 	}

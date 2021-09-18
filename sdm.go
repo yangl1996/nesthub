@@ -44,8 +44,7 @@ func (d *DeviceEndpoint) GetDevice() (DeviceTraits, error) {
 		return r, err
 	}
 
-	err = json.Unmarshal(res.Traits, &r)
-	if err != nil {
+	if err := json.Unmarshal(res.Traits, &r); err != nil {
 		return r, err
 	}
 
@@ -67,8 +66,7 @@ func (d *DeviceEndpoint) SetMode(mode string) error {
 		Command: "sdm.devices.commands.ThermostatMode.SetMode",
 		Params:  ep,
 	}
-	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
-	if err != nil {
+	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
 		return err
 	}
 	return nil
@@ -89,8 +87,7 @@ func (d *DeviceEndpoint) SetHeat(temp float64) error {
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat",
 		Params:  ep,
 	}
-	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
-	if err != nil {
+	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
 		return err
 	}
 	return nil
@@ -111,8 +108,7 @@ func (d *DeviceEndpoint) SetCool(temp float64) error {
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool",
 		Params:  ep,
 	}
-	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
-	if err != nil {
+	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
 		return err
 	}
 	return nil
@@ -135,8 +131,7 @@ func (d *DeviceEndpoint) SetHeatCool(heat, cool float64) error {
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange",
 		Params:  ep,
 	}
-	_, err = d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do()
-	if err != nil {
+	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
 		return err
 	}
 	return nil

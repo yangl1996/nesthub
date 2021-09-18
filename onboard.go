@@ -42,8 +42,7 @@ func setup(config Config) error {
 			}
 		} else {
 			time.Sleep(1 * time.Second)
-			op, err = s.Operations.Get(opName).Do()
-			if err != nil {
+			if _, err := s.Operations.Get(opName).Do(); err != nil {
 				return err
 			}
 		}
@@ -89,8 +88,8 @@ func setup(config Config) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(config.OAuthToken, tokenJson, 0644)
-	if err != nil {
+
+	if err := ioutil.WriteFile(config.OAuthToken, tokenJson, 0600); err != nil {
 		return err
 	}
 

@@ -6,5 +6,6 @@
     "ServiceAccountKey": "path to credential of the GCP service account",
     "OAuthToken": "path to store oauth token",
     "HubName": "Name of the hub",
-    "PairingCode": "8 digits of pairing code"
+    "PairingCode": "8 digits of pairing code",
+    "StoragePath": "path where nesthub will store data"
 }

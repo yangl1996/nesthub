@@ -1,4 +1,4 @@
-LINTERS := -E gci -E gofmt -E whitespace
+LINTERS := -E gci -E gofmt -E whitespace -E misspell -E gosec -E goconst
 
 all: vendor lint build
 
