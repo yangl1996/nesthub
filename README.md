@@ -96,6 +96,9 @@ Cons:
     + Does not hit the ridiculously low API rate limit.
 + Device state query (e.g. check temperature) is entirely local. (Low latency.)
 
+## Networking and Firewall Rules
+If you're configuring a firewall, you can set the TCP port used by Nesthub in the config. By default the application will choose an open port on start. You'll also need to leave UDP 5353 open for mDNS queries.
+
 ## Acknowledgements
 
 This project uses hc for a pure-go implementation of the HomeKit Accessory
