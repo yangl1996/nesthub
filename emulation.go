@@ -51,10 +51,8 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 	}
 
 	// list the devices
-	resp, err := s.Enterprises.Devices.List("enterprises/" + c.SDMProjectID).Do()
-	if err != nil {
-		return nil, err
-	}
+	resp := ListDevicesWithRetries(s, c)
+
 	log.Println("Retrieved", len(resp.Devices), "devices")
 	if len(resp.Devices) > 1 {
 		log.Fatalln("Do not support multiple devices for now")
@@ -99,6 +97,26 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 	e.SetupHandlers()
 
 	return e, nil
+}
+
+func ListDevicesWithRetries(s *sdm.Service, c Config) *sdm.GoogleHomeEnterpriseSdmV1ListDevicesResponse {
+	delay := 1
+	delayMultiplier := 2
+	delayMax := 120
+	for {
+		resp, err := s.Enterprises.Devices.List("enterprises/" + c.SDMProjectID).Do()
+		if err != nil {
+			delayDuration := time.Duration(delay) * time.Second
+			log.Printf("Failed to connect to SDM API, retrying in %s: %s", delayDuration, err)
+			time.Sleep(delayDuration)
+			delay = delay * delayMultiplier
+			if delay > delayMax {
+				delay = delayMax
+			}
+			continue
+		}
+		return resp
+	}
 }
 
 func (d *EmulatedDevice) SetupHandlers() {
