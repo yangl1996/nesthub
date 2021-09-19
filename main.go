@@ -48,7 +48,7 @@ func main() {
 	acc.AddService(svc.Service)
 	log.Println(c.StoragePath)
 
-	t, err := hc.NewIPTransport(hc.Config{Pin: c.PairingCode, StoragePath: c.StoragePath}, acc.Accessory)
+	t, err := hc.NewIPTransport(hc.Config{Pin: c.PairingCode, StoragePath: c.StoragePath, Port: c.Port}, acc.Accessory)
 	if err != nil {
 		log.Fatalln(err)
 	}

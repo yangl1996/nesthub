@@ -9,15 +9,16 @@ import (
 )
 
 type Config struct {
-	SDMProjectID      string // the project ID shown in the SDM console
-	OAuthClientID     string // the oauth client ID created in GCP and set in SDM project
-	OAuthClientSecret string // the oauth client secret created in GCP
-	GCPProjectID      string // the project ID shown in the GCP console
-	ServiceAccountKey string // credentials of the service account of GCP project
-	OAuthToken        string // path to the oauth token
-	HubName           string // name of the hub
-	PairingCode       string // 8 digits of pairing code
-	StoragePath       string // nesthub will store data at this path
+	SDMProjectID      string // the project ID shown in the SDM console, required
+	OAuthClientID     string // the oauth client ID created in GCP and set in SDM project, required
+	OAuthClientSecret string // the oauth client secret created in GCP, required
+	GCPProjectID      string // the project ID shown in the GCP console, required
+	ServiceAccountKey string // credentials of the service account of GCP project, required
+	OAuthToken        string // path to the oauth token, required
+	HubName           string // name of the hub, required
+	PairingCode       string // 8 digits of pairing code, optional
+	Port              string // TCP port to listen on, optional
+	StoragePath       string // nesthub will store data at this path, optional
 }
 
 func parse(path string) (Config, error) {
