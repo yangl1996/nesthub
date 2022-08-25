@@ -24,12 +24,12 @@ func main() {
 
 	c, err := config.Parse(configPath)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("failed to parse config: %v", err)
 	}
 
 	if *doSetupFlag {
 		if err := onboard.Setup(c); err != nil {
-			log.Fatalln(err)
+			log.Fatalf("failed to setup: %v", err)
 		}
 	}
 
@@ -39,7 +39,6 @@ func main() {
 	}
 	log.Println("Device emulation started")
 
-	// try to get the current temperature
 	// init the bridge device
 	info := accessory.Info{
 		Name:         c.HubName,
@@ -49,11 +48,16 @@ func main() {
 
 	// add the service to the bridge
 	acc.AddService(svc.Service)
-	log.Println(c.StoragePath)
-
-	t, err := hc.NewIPTransport(hc.Config{Pin: c.PairingCode, StoragePath: c.StoragePath, Port: c.Port}, acc.Accessory)
+	t, err := hc.NewIPTransport(
+		hc.Config{
+			Pin:         c.PairingCode,
+			StoragePath: c.StoragePath,
+			Port:        c.Port,
+		},
+		acc.Accessory,
+	)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("failed to start transport: %s", err)
 	}
 
 	hc.OnTermination(func() {

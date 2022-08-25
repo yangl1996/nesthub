@@ -2,6 +2,7 @@ package sdmclient
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	sdm "google.golang.org/api/smartdevicemanagement/v1"
@@ -41,11 +42,11 @@ func (d *DeviceEndpoint) GetDevice() (DeviceTraits, error) {
 	res, err := d.Enterprises.Devices.Get(d.Name).Do()
 	var r DeviceTraits
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("failed to get device: %v", err)
 	}
 
 	if err := json.Unmarshal(res.Traits, &r); err != nil {
-		return r, err
+		return r, fmt.Errorf("failed to unmarshal device traits: %v", err)
 	}
 
 	return r, nil
@@ -60,14 +61,14 @@ func (d *DeviceEndpoint) SetMode(mode string) error {
 	}
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal mode params: %v", err)
 	}
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatMode.SetMode",
 		Params:  ep,
 	}
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return err
+		return fmt.Errorf("failed to set mode: %v", err)
 	}
 	return nil
 }
@@ -81,14 +82,14 @@ func (d *DeviceEndpoint) SetHeat(temp float64) error {
 	}
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal heat params: %v", err)
 	}
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat",
 		Params:  ep,
 	}
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return err
+		return fmt.Errorf("failed to set heat: %v", err)
 	}
 	return nil
 }
@@ -102,14 +103,14 @@ func (d *DeviceEndpoint) SetCool(temp float64) error {
 	}
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal cool params: %v", err)
 	}
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool",
 		Params:  ep,
 	}
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return err
+		return fmt.Errorf("failed to set cool: %v", err)
 	}
 	return nil
 }
@@ -125,14 +126,14 @@ func (d *DeviceEndpoint) SetHeatCool(heat, cool float64) error {
 	}
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal heatcool params: %v", err)
 	}
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange",
 		Params:  ep,
 	}
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return err
+		return fmt.Errorf("failed to set heatcool: %v", err)
 	}
 	return nil
 }

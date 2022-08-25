@@ -3,6 +3,7 @@ package emulation
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -44,12 +45,12 @@ func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice,
 	config := c.OauthConfig()
 	token, err := c.OauthToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get oauth token: %s", err)
 	}
 	source := config.TokenSource(ctx, &token)
 	s, err := sdm.NewService(ctx, option.WithTokenSource(source))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create sdm service: %s", err)
 	}
 
 	// list the devices
@@ -57,9 +58,9 @@ func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice,
 
 	log.Println("Retrieved", len(resp.Devices), "devices")
 	if len(resp.Devices) > 1 {
-		log.Fatalln("Do not support multiple devices for now")
+		log.Fatalf("nesthub only supports one device, more than one device found: %v", resp.Devices)
 	}
-	// FIXME: I'm being lazy here by only supporting one device and not checking
+	// TODO: I'm being lazy here by only supporting one device and not checking
 	// the type of the device. Works for me now.
 	dn := resp.Devices[0].Name
 	log.Println("Controlling device", dn)
@@ -85,15 +86,14 @@ func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice,
 
 	// start updating the states through pubsub
 	go func() {
-		err := e.ListenEvents()
-		if err != nil {
-			log.Println(err)
+		if err := e.ListenEvents(); err != nil {
+			log.Printf("pubsub event listener encountered an error: %s", err)
 		}
 	}()
 
 	// query the API once to get the initial traits
 	if err := e.ForceUpdate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to force update device: %s", err)
 	}
 
 	e.SetupHandlers()
@@ -144,8 +144,7 @@ func (d *EmulatedDevice) SetupHandlers() {
 
 	d.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
 		log.Println("Request: set target temp to", n)
-		err := d.SetTargetTemp(n)
-		if err != nil {
+		if err := d.SetTargetTemp(n); err != nil {
 			log.Println(err)
 		}
 	})
@@ -175,8 +174,7 @@ func (d *EmulatedDevice) SetupHandlers() {
 
 	d.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
 		log.Println("Request: set target mode to", n)
-		err := d.SetTargetMode(n)
-		if err != nil {
+		if err := d.SetTargetMode(n); err != nil {
 			log.Println(err)
 		}
 	})

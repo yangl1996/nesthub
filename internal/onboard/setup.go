@@ -72,7 +72,7 @@ func Setup(config config.Config) error {
 		ReadHeaderTimeout: 1 * time.Second,
 	}
 	http.HandleFunc("/", handler)
-	go srv.ListenAndServe()
+	go srv.ListenAndServe() //nolint:errcheck
 
 	// let the user login
 	if err := helpers.OpenURL(authURL); err != nil {
