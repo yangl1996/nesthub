@@ -1,4 +1,4 @@
-package main
+package sdmclient
 
 import (
 	"encoding/json"

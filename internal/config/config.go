@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ type Config struct {
 	StoragePath       string // nesthub will store data at this path, optional
 }
 
-func parse(path string) (Config, error) {
+func Parse(path string) (Config, error) {
 	var c Config
 	jsonFile, err := os.Open(path)
 	if err != nil {
@@ -39,7 +39,7 @@ func parse(path string) (Config, error) {
 	return c, nil
 }
 
-func (c Config) oauthConfig() oauth2.Config {
+func (c Config) OauthConfig() oauth2.Config {
 	// get the oauth2 token
 	config := oauth2.Config{
 		ClientID:     c.OAuthClientID,
@@ -53,7 +53,7 @@ func (c Config) oauthConfig() oauth2.Config {
 	return config
 }
 
-func (c Config) oauthToken() (oauth2.Token, error) {
+func (c Config) OauthToken() (oauth2.Token, error) {
 	t := oauth2.Token{}
 	jsonFile, err := os.Open(c.OAuthToken)
 	if err != nil {

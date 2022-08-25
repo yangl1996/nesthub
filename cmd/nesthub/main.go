@@ -7,6 +7,9 @@ import (
 	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
 	"github.com/brutella/hc/service"
+	"github.com/yangl1996/nesthub/internal/config"
+	"github.com/yangl1996/nesthub/internal/onboard"
+	"github.com/yangl1996/nesthub/pkg/emulation"
 )
 
 func main() {
@@ -19,19 +22,19 @@ func main() {
 		configPath = *configPathFlag
 	}
 
-	c, err := parse(configPath)
+	c, err := config.Parse(configPath)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	if *doSetupFlag {
-		if err := setup(c); err != nil {
+		if err := onboard.Setup(c); err != nil {
 			log.Fatalln(err)
 		}
 	}
 
 	svc := service.NewThermostat()
-	if _, err := NewEmulatedDevice(svc, c); err != nil {
+	if _, err := emulation.NewEmulatedDevice(svc, c); err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("Device emulation started")

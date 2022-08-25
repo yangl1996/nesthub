@@ -1,4 +1,4 @@
-package main
+package emulation
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	"github.com/brutella/hc/service"
+	"github.com/yangl1996/nesthub/internal/config"
+	"github.com/yangl1996/nesthub/pkg/sdmclient"
 	"google.golang.org/api/option"
 	sdm "google.golang.org/api/smartdevicemanagement/v1"
 )
@@ -23,24 +25,24 @@ const (
 type PubsubUpdate struct {
 	Timestamp      time.Time
 	ResourceUpdate struct {
-		Traits DeviceTraits
+		Traits sdmclient.DeviceTraits
 	}
 }
 
 type EmulatedDevice struct {
-	*DeviceEndpoint
+	*sdmclient.DeviceEndpoint
 	sub *pubsub.Subscription
 	*sync.Mutex
-	state DeviceTraits
+	state sdmclient.DeviceTraits
 	*service.Thermostat
 }
 
-func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error) {
+func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice, error) {
 	ctx := context.Background()
 
 	// get the oauth2 token
-	config := c.oauthConfig()
-	token, err := c.oauthToken()
+	config := c.OauthConfig()
+	token, err := c.OauthToken()
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +63,7 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 	// the type of the device. Works for me now.
 	dn := resp.Devices[0].Name
 	log.Println("Controlling device", dn)
-	de := &DeviceEndpoint{
+	de := &sdmclient.DeviceEndpoint{
 		Service: s,
 		Name:    dn,
 	}
@@ -99,7 +101,7 @@ func NewEmulatedDevice(t *service.Thermostat, c Config) (*EmulatedDevice, error)
 	return e, nil
 }
 
-func ListDevicesWithRetries(s *sdm.Service, c Config) *sdm.GoogleHomeEnterpriseSdmV1ListDevicesResponse {
+func ListDevicesWithRetries(s *sdm.Service, c config.Config) *sdm.GoogleHomeEnterpriseSdmV1ListDevicesResponse {
 	delay := 1
 	delayMultiplier := 2
 	delayMax := 120
@@ -320,6 +322,7 @@ func (d *EmulatedDevice) ListenEvents() error {
 			var update PubsubUpdate
 			if err := json.Unmarshal(m.Data, &update); err != nil {
 				log.Println("Error decoding pubsub update:", err)
+				m.Nack()
 			}
 			d.UpdateTraits(update)
 			m.Ack()

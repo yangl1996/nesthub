@@ -1,7 +1,7 @@
-package main
+package helpers
 
 import "os/exec"
 
-func openURL(u string) error {
+func OpenURL(u string) error {
 	return exec.Command("open", u).Start()
 }

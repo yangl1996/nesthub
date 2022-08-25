@@ -1,4 +1,4 @@
-package main
+package onboard
 
 import (
 	"context"
@@ -10,11 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yangl1996/nesthub/internal/config"
+	"github.com/yangl1996/nesthub/internal/helpers"
 	"google.golang.org/api/option"
 	su "google.golang.org/api/serviceusage/v1"
 )
 
-func setup(config Config) error {
+func Setup(config config.Config) error {
 	ctx := context.Background()
 	log.Println("Enabling Smart Device Management API")
 	// init config for service usage API
@@ -22,6 +24,7 @@ func setup(config Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to create Google Service Usage API client: %v", err)
 	}
+
 	// create the request
 	req := &su.BatchEnableServicesRequest{
 		ServiceIds: []string{"smartdevicemanagement.googleapis.com"},
@@ -53,6 +56,7 @@ func setup(config Config) error {
 	authCode := ""
 	authDone := &sync.WaitGroup{}
 	authDone.Add(1)
+	defer authDone.Done()
 
 	// start the server to receive callback from the browser
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -60,29 +64,30 @@ func setup(config Config) error {
 		authCode = keys.Get("code")
 		if len(authCode) == 0 {
 			fmt.Fprintf(w, "Bad redirect.")
-		} else {
-			fmt.Fprintf(w, "Successful authorization. Please go back to Terminal.")
-			defer authDone.Done()
 		}
+		fmt.Fprintf(w, "Successful authorization. Please go back to Terminal.")
 	}
 	srv := &http.Server{
 		Addr:              ":7979",
 		ReadHeaderTimeout: 1 * time.Second,
 	}
 	http.HandleFunc("/", handler)
-	go srv.ListenAndServe() //nolint:errcheck
+	go srv.ListenAndServe()
+
 	// let the user login
-	if err := openURL(authURL); err != nil {
+	if err := helpers.OpenURL(authURL); err != nil {
 		return fmt.Errorf("failed to open browser: %v", err)
 	}
+
 	// wait for authorization to finish
 	authDone.Wait()
 	if err := srv.Shutdown(context.Background()); err != nil {
 		return fmt.Errorf("failed to shutdown the server: %v", err)
 	}
 	log.Println("Authorization successful.", authCode)
+
 	// exchange to obtain the token
-	oauthConfig := config.oauthConfig()
+	oauthConfig := config.OauthConfig()
 	token, err := oauthConfig.Exchange(ctx, authCode)
 	if err != nil {
 		return fmt.Errorf("failed to convert authorization code into a token: %v", err)
