@@ -2,7 +2,7 @@ name: ci
 on:
   push:
 env:
-  GO_VERSION: 1.17.1
+  GO_VERSION: 1.19
 jobs:
   go-mod-tidy:
     runs-on: ubuntu-latest
@@ -26,7 +26,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
       - uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.42.1
+          version: v1.49.0
           args: -E gci -E gofmt -E whitespace -E misspell -E gosec -E goconst
           skip-go-installation: true
   build:

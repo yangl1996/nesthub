@@ -4,3 +4,4 @@ oauth.json
 *.swp
 Nest Hub
 credential.json
+.vscode

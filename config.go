@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"os"
 
 	"golang.org/x/oauth2"
@@ -25,15 +26,15 @@ func parse(path string) (Config, error) {
 	var c Config
 	jsonFile, err := os.Open(path)
 	if err != nil {
-		return c, err
+		return c, fmt.Errorf("failed to open config at %s: %v", path, err)
 	}
 	defer jsonFile.Close()
-	b, err := ioutil.ReadAll(jsonFile)
+	b, err := io.ReadAll(jsonFile)
 	if err != nil {
-		return c, err
+		return c, fmt.Errorf("failed to read config: %v", err)
 	}
 	if err := json.Unmarshal(b, &c); err != nil {
-		return c, err
+		return c, fmt.Errorf("failed to unmarshal config: %v", err)
 	}
 	return c, nil
 }
@@ -56,15 +57,15 @@ func (c Config) oauthToken() (oauth2.Token, error) {
 	t := oauth2.Token{}
 	jsonFile, err := os.Open(c.OAuthToken)
 	if err != nil {
-		return t, err
+		return t, fmt.Errorf("failed to open oauth token %s: %v", c.OAuthToken, err)
 	}
 	defer jsonFile.Close()
-	b, err := ioutil.ReadAll(jsonFile)
+	b, err := io.ReadAll(jsonFile)
 	if err != nil {
-		return t, err
+		return t, fmt.Errorf("failed to read oauth token: %v", err)
 	}
 	if err := json.Unmarshal(b, &t); err != nil {
-		return t, err
+		return t, fmt.Errorf("failed to unmarshal oauth token: %v", err)
 	}
 	return t, nil
 }

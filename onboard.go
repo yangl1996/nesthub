@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -21,7 +20,7 @@ func setup(config Config) error {
 	// init config for service usage API
 	s, err := su.NewService(ctx, option.WithCredentialsFile(config.ServiceAccountKey))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create Google Service Usage API client: %v", err)
 	}
 	// create the request
 	req := &su.BatchEnableServicesRequest{
@@ -29,21 +28,22 @@ func setup(config Config) error {
 	}
 	op, err := s.Services.BatchEnable("projects/"+config.GCPProjectID, req).Do()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to enable the following Google services %v: %v", req.ServiceIds, err)
 	}
-	opName := op.Name
+
 	// poll the operation to wait for the result
 	for {
 		if op.Done {
 			if op.Error == nil {
 				break
 			} else {
-				return errors.New("failed enabling SDM API")
+				return fmt.Errorf("failed to enable the Smart Device Management API: %v", op.Error)
 			}
 		} else {
 			time.Sleep(1 * time.Second)
-			if _, err := s.Operations.Get(opName).Do(); err != nil {
-				return err
+			log.Println("Waiting for the Smart Device Management API to be enabled...")
+			if op, err = s.Operations.Get(op.Name).Do(); err != nil {
+				return fmt.Errorf("failed to get state of Smart Device Management API Enablement operation %v: %v", op.Name, err)
 			}
 		}
 	}
@@ -65,62 +65,36 @@ func setup(config Config) error {
 			defer authDone.Done()
 		}
 	}
-	srv := &http.Server{Addr: ":7979"}
+	srv := &http.Server{
+		Addr:              ":7979",
+		ReadHeaderTimeout: 1 * time.Second,
+	}
 	http.HandleFunc("/", handler)
 	go srv.ListenAndServe() //nolint:errcheck
 	// let the user login
 	if err := openURL(authURL); err != nil {
-		return err
+		return fmt.Errorf("failed to open browser: %v", err)
 	}
 	// wait for authorization to finish
 	authDone.Wait()
 	if err := srv.Shutdown(context.Background()); err != nil {
-		return err
+		return fmt.Errorf("failed to shutdown the server: %v", err)
 	}
 	log.Println("Authorization successful.", authCode)
 	// exchange to obtain the token
 	oauthConfig := config.oauthConfig()
 	token, err := oauthConfig.Exchange(ctx, authCode)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to convert authorization code into a token: %v", err)
 	}
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal token: %v", err)
 	}
 
-	if err := ioutil.WriteFile(config.OAuthToken, tokenJson, 0600); err != nil {
-		return err
+	if err := os.WriteFile(config.OAuthToken, tokenJson, 0600); err != nil {
+		return fmt.Errorf("failed to write token to file %s: %v", config.OAuthToken, err)
 	}
-
-	/*
-		// create a pubsub
-		pc, err := pubsub.NewClient(ctx, config.GCPProjectID, option.WithCredentialsFile(config.ServiceAccountKey))
-		if err != nil {
-			return err
-		}
-		sub := pc.Subscription("homebridge-pubsub")
-		subThere, err := sub.Exists(ctx)
-		if err != nil {
-			return err
-		}
-		if subThere == true {
-			err = sub.Delete(ctx)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = pc.CreateSubscription(ctx, "homebridge-pubsub", pubsub.SubscriptionConfig{
-			// nest pubsub topics are of format projects/sdm-prod/topics/enterprise-<SDM project ID>
-			Topic:            pc.TopicInProject("enterprise-"+config.SDMProjectID, "sdm-prod"),
-			AckDeadline:      10 * time.Second,
-			ExpirationPolicy: 1 * time.Hour,
-		})
-		if err != nil {
-			return err
-		}
-		log.Println("Pubsub subscription created")
-	*/
 
 	return nil
 }
