@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"log"
-	"os"
 
 	"github.com/brutella/hc"
 	"github.com/brutella/hc/accessory"
@@ -15,8 +14,6 @@ import (
 	"github.com/yangl1996/nesthub/internal/onboard"
 	"github.com/yangl1996/nesthub/pkg/emulation"
 )
-
-const sdmSvcName = "smartdevicemanagement.googleapis.com"
 
 func main() {
 	ctx := context.Background()
@@ -32,6 +29,7 @@ func main() {
 	}
 
 	// Confirm SDM is enabled
+	const sdmSvcName = "smartdevicemanagement.googleapis.com"
 	if err := onboard.SvcEnabled(ctx, cfg, sdmSvcName); errors.Is(err, helpers.ErrSvcNotEnabled) {
 		log.Println("smart device management service not enabled")
 
@@ -49,10 +47,6 @@ func main() {
 		if err := onboard.AuthorizeOAuthToken(ctx, cfg); err != nil {
 			log.Fatalf("failed to authorize oath token: %v", err)
 		}
-
-		if err := os.RemoveAll(cfg.StoragePath); err != nil {
-			log.Fatal(err)
-		}
 	}
 
 	svc := service.NewThermostat()
@@ -65,7 +59,7 @@ func main() {
 	// init the bridge device
 	info := accessory.Info{
 		Name:         cfg.HubName,
-		Manufacturer: "leiy",
+		Manufacturer: "github.com/yangl1996/nesthub",
 	}
 	acc := accessory.NewBridge(info)
 

@@ -6,17 +6,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var cfg = Config{
-	HubName:           "my",
-	SDMProjectID:      "guitar",
-	GCPProjectID:      "gently",
-	OAuthClientID:     "weaps",
-	OAuthClientSecret: "hey",
-	OAuthTokenPath:    "jude",
-	ServiceAccountKey: "here",
-	PairingCode:       "comes",
-	StoragePath:       "the",
-	SetupRedirectUri:  "sun",
+func newTestConfig() Config {
+	return Config{
+		HubName:           "my",
+		SDMProjectID:      "guitar",
+		GCPProjectID:      "gently",
+		OAuthClientID:     "weaps",
+		OAuthClientSecret: "hey",
+		OAuthTokenPath:    "jude",
+		ServiceAccountKey: "here",
+		PairingCode:       "comes",
+		StoragePath:       "the",
+		SetupRedirectUri:  "sun",
+	}
 }
 
 func TestValidateRequiredFields(t *testing.T) {
@@ -24,13 +26,13 @@ func TestValidateRequiredFields(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
-		tempConfig := cfg
+		tempConfig := newTestConfig()
 		assert.NoError(t, tempConfig.validateRequiredFields())
 	})
 
 	t.Run("missing hub name", func(t *testing.T) {
 		t.Parallel()
-		tempConfig := cfg
+		tempConfig := newTestConfig()
 		tempConfig.HubName = ""
 		assert.Error(t, tempConfig.validateRequiredFields())
 	})
@@ -49,7 +51,7 @@ func TestPopulateOptionalFields(t *testing.T) {
 
 	t.Run("no changes", func(t *testing.T) {
 		t.Parallel()
-		tempConfig := cfg
+		tempConfig := newTestConfig()
 		tempConfig.populateOptionalFields()
 		assert.Equal(t, "comes", tempConfig.PairingCode)
 		assert.Equal(t, "the", tempConfig.StoragePath)
@@ -58,7 +60,7 @@ func TestPopulateOptionalFields(t *testing.T) {
 
 	t.Run("changes", func(t *testing.T) {
 		t.Parallel()
-		tempConfig := cfg
+		tempConfig := newTestConfig()
 		tempConfig.PairingCode = ""
 		tempConfig.StoragePath = ""
 		tempConfig.SetupRedirectUri = ""
