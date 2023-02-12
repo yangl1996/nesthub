@@ -1,71 +1,100 @@
 package config
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
-	"os"
 
-	"golang.org/x/oauth2"
+	"github.com/yangl1996/nesthub/internal/helpers"
 )
 
 type Config struct {
-	SDMProjectID      string // the project ID shown in the SDM console, required
-	OAuthClientID     string // the oauth client ID created in GCP and set in SDM project, required
-	OAuthClientSecret string // the oauth client secret created in GCP, required
-	GCPProjectID      string // the project ID shown in the GCP console, required
-	ServiceAccountKey string // credentials of the service account of GCP project, required
-	OAuthToken        string // path to the oauth token, required
-	HubName           string // name of the hub, required
-	PairingCode       string // 8 digits of pairing code, optional
-	Port              string // TCP port to listen on, optional
-	StoragePath       string // nesthub will store data at this path, optional
+	// HubName is the name of the hub
+	HubName string `json:"HubName,omitempty"`
+
+	// SDMProjectID is the project ID shown in the SDM console
+	SDMProjectID string `json:"SDMProjectID,omitempty"`
+
+	// GCPProjectID is the project ID shown in the GCP console
+	GCPProjectID string `json:"GCPProjectID,omitempty"`
+
+	// OAuthClientID is the oauth client ID created in GCP and set in SDM project
+	OAuthClientID string `json:"OAuthClientID,omitempty"`
+
+	// OAuthClientSecret is the oauth client secret created in GCP
+	OAuthClientSecret string `json:"OAuthClientSecret,omitempty"`
+
+	// OAuthTokenPath is the path to the oauth token
+	OAuthTokenPath string `json:"OAuthToken,omitempty"`
+
+	// ServiceAccountKey credentials of the service account of GCP project
+	ServiceAccountKey string `json:"ServiceAccountKey,omitempty"`
+
+	// PairingCode is the 8 digit pairing code
+	PairingCode string `json:"PairingCode,omitempty"`
+
+	// Port is the port that homekit will connect to
+	Port string `json:"Port,omitempty"`
+
+	// StoragePath is the filepath where connection data is stored
+	StoragePath string `json:"StoragePath,omitempty"`
+
+	// An http server is required during nesthub setup, you can use this field to specify a
+	// network address to use. (default: http://localhost:7979)
+	SetupRedirectUri string `json:"SetupRedirectUri,omitempty"`
 }
 
-func Parse(path string) (Config, error) {
-	var c Config
-	jsonFile, err := os.Open(path)
-	if err != nil {
-		return c, fmt.Errorf("failed to open config at %s: %v", path, err)
+func NewConfig(path string) (*Config, error) {
+	cfg := &Config{}
+	if err := helpers.JsonUnmarshalFile(path, cfg); err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
-	defer jsonFile.Close()
-	b, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return c, fmt.Errorf("failed to read config: %v", err)
+
+	if err := cfg.validateRequiredFields(); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
-	if err := json.Unmarshal(b, &c); err != nil {
-		return c, fmt.Errorf("failed to unmarshal config: %v", err)
-	}
-	return c, nil
+
+	cfg.populateOptionalFields()
+
+	return cfg, nil
 }
 
-func (c Config) OauthConfig() oauth2.Config {
-	// get the oauth2 token
-	config := oauth2.Config{
-		ClientID:     c.OAuthClientID,
-		ClientSecret: c.OAuthClientSecret,
-		Endpoint: oauth2.Endpoint{
-			TokenURL: "https://oauth2.googleapis.com/token",
-			AuthURL:  "https://accounts.google.com/o/oauth2/auth",
-		},
-		RedirectURL: "http://localhost:7979",
+// validateRequiredFields checks that all required config fields exist
+func (cfg *Config) validateRequiredFields() error {
+	errs := []error{}
+
+	if cfg.HubName == "" {
+		errs = append(errs, errors.New("HubName"))
 	}
-	return config
+
+	if cfg.SDMProjectID == "" {
+		errs = append(errs, errors.New("SDMProjectID"))
+	}
+
+	if cfg.GCPProjectID == "" {
+		errs = append(errs, errors.New("GCPProjectID"))
+	}
+
+	if cfg.OAuthClientID == "" {
+		errs = append(errs, errors.New("OAuthClientID"))
+	}
+
+	if cfg.OAuthClientSecret == "" {
+		errs = append(errs, errors.New("OAuthClientSecret"))
+	}
+
+	if cfg.OAuthTokenPath == "" {
+		errs = append(errs, errors.New("OAuthToken"))
+	}
+
+	if cfg.ServiceAccountKey == "" {
+		errs = append(errs, errors.New("ServiceAccountKey"))
+	}
+
+	return helpers.ErrListToErr("config missing fields", errs)
 }
 
-func (c Config) OauthToken() (oauth2.Token, error) {
-	t := oauth2.Token{}
-	jsonFile, err := os.Open(c.OAuthToken)
-	if err != nil {
-		return t, fmt.Errorf("failed to open oauth token %s: %v", c.OAuthToken, err)
+func (cfg *Config) populateOptionalFields() {
+	if cfg.SetupRedirectUri == "" {
+		cfg.SetupRedirectUri = "http://localhost:7979"
 	}
-	defer jsonFile.Close()
-	b, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return t, fmt.Errorf("failed to read oauth token: %v", err)
-	}
-	if err := json.Unmarshal(b, &t); err != nil {
-		return t, fmt.Errorf("failed to unmarshal oauth token: %v", err)
-	}
-	return t, nil
 }

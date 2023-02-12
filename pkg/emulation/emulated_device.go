@@ -38,32 +38,33 @@ type EmulatedDevice struct {
 	*service.Thermostat
 }
 
-func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice, error) {
-	ctx := context.Background()
-
-	// get the oauth2 token
-	config := c.OauthConfig()
-	token, err := c.OauthToken()
+func NewEmulatedDevice(ctx context.Context, c *config.Config, t *service.Thermostat) (*EmulatedDevice, error) {
+	// Setup sdm service
+	tokenSource, err := c.NewOAuthTokenSource(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get oauth token: %s", err)
+		return nil, fmt.Errorf("failed to get oauth token source: %w", err)
 	}
-	source := config.TokenSource(ctx, &token)
-	s, err := sdm.NewService(ctx, option.WithTokenSource(source))
+
+	s, err := sdm.NewService(ctx, option.WithTokenSource(tokenSource))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create sdm service: %s", err)
+		return nil, fmt.Errorf("failed to create sdm service: %w", err)
 	}
 
 	// list the devices
 	resp := ListDevicesWithRetries(s, c)
 
 	log.Println("Retrieved", len(resp.Devices), "devices")
+
+	// TODO: support multiple devices
 	if len(resp.Devices) > 1 {
 		log.Fatalf("nesthub only supports one device, more than one device found: %v", resp.Devices)
 	}
 	// TODO: I'm being lazy here by only supporting one device and not checking
 	// the type of the device. Works for me now.
 	dn := resp.Devices[0].Name
+
 	log.Println("Controlling device", dn)
+
 	de := &sdmclient.DeviceEndpoint{
 		Service: s,
 		Name:    dn,
@@ -74,6 +75,7 @@ func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice,
 	if err != nil {
 		return nil, err
 	}
+
 	sub := pc.Subscription("homebridge-pubsub")
 
 	// initialize the structure
@@ -87,13 +89,13 @@ func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice,
 	// start updating the states through pubsub
 	go func() {
 		if err := e.ListenEvents(); err != nil {
-			log.Printf("pubsub event listener encountered an error: %s", err)
+			log.Printf("pubsub event listener encountered an error: %v", err)
 		}
 	}()
 
 	// query the API once to get the initial traits
 	if err := e.ForceUpdate(); err != nil {
-		return nil, fmt.Errorf("failed to force update device: %s", err)
+		return nil, fmt.Errorf("failed to force update device: %w", err)
 	}
 
 	e.SetupHandlers()
@@ -101,34 +103,38 @@ func NewEmulatedDevice(t *service.Thermostat, c config.Config) (*EmulatedDevice,
 	return e, nil
 }
 
-func ListDevicesWithRetries(s *sdm.Service, c config.Config) *sdm.GoogleHomeEnterpriseSdmV1ListDevicesResponse {
+func ListDevicesWithRetries(s *sdm.Service, c *config.Config) *sdm.GoogleHomeEnterpriseSdmV1ListDevicesResponse {
 	delay := 1
 	delayMultiplier := 2
 	delayMax := 120
+
 	for {
 		resp, err := s.Enterprises.Devices.List("enterprises/" + c.SDMProjectID).Do()
 		if err != nil {
 			delayDuration := time.Duration(delay) * time.Second
-			log.Printf("Failed to connect to SDM API, retrying in %s: %s", delayDuration, err)
+			log.Printf("Failed to connect to SDM API, retrying in %s: %v", delayDuration, err)
 			time.Sleep(delayDuration)
-			delay = delay * delayMultiplier
+
+			delay *= delayMultiplier
 			if delay > delayMax {
 				delay = delayMax
 			}
+
 			continue
 		}
+
 		return resp
 	}
 }
 
 func (d *EmulatedDevice) SetupHandlers() {
 	// init the thermostat service
-
+	//
 	// set the characteristics
 	// Celsius is 0, Fahrenheit is 1
-	// https://developer.appld.com/documentation/homekit/hmcharacteristicvaluetemperatureunit
+	// https://developer.apple.com/documentation/homekit/hmcharacteristicvaluetemperatureunit
 	// Off is 0, Heat is 1, Cool is 2, Auto is 3
-	// https://developer.appld.com/documentation/homekit/hmcharacteristicvalueheatingcooling
+	// https://developer.apple.com/documentation/homekit/hmcharacteristicvalueheatingcooling
 	// Note that TargetHeatingCoolingState can be 0-3, but CurrentHeatingCoolingState
 	// can only be 0-2, because "Auto" is not an actual statd.
 	// https://github.com/homebridge/HAP-NodeJS/issues/815
@@ -238,6 +244,7 @@ func (d *EmulatedDevice) TargetMode() int {
 
 func (d *EmulatedDevice) SetTargetMode(n int) error {
 	var s string
+
 	switch n {
 	case 0:
 		s = OFF
@@ -250,20 +257,25 @@ func (d *EmulatedDevice) SetTargetMode(n int) error {
 	default:
 		panic("unreachable target mode enumeration")
 	}
-	err := d.SetMode(s)
-	if err != nil {
+
+	if err := d.SetMode(s); err != nil {
 		return err
 	}
+
 	d.Lock()
 	defer d.Unlock()
+
 	log.Println("Setting target mode to", s)
+
 	d.state.SetMode.Mode = s
 	d.state.SetMode.Timestamp = time.Now()
+
 	return nil
 }
 
 func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	var err error
+
 	switch d.state.SetMode.Mode {
 	case OFF:
 		err = nil
@@ -276,12 +288,16 @@ func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	default:
 		panic("unreachable target mode when setting target temp")
 	}
+
 	if err != nil {
 		return err
 	}
+
 	d.Lock()
 	defer d.Unlock()
+
 	log.Println("Setting target temp to", t)
+
 	switch d.state.SetMode.Mode {
 	case HEAT:
 		d.state.SetTemp.HeatCelsius = t
@@ -297,6 +313,7 @@ func (d *EmulatedDevice) SetTargetTemp(t float64) error {
 	default:
 		return nil // don't update timestamp for the OFF case
 	}
+
 	return nil
 }
 
@@ -315,6 +332,7 @@ func (d *EmulatedDevice) DisplayUnit() int {
 func (d *EmulatedDevice) ListenEvents() error {
 	// create a pubsub client
 	ctx := context.Background()
+
 	for {
 		_ = d.sub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
 			var update PubsubUpdate
@@ -330,21 +348,27 @@ func (d *EmulatedDevice) ListenEvents() error {
 
 func (d *EmulatedDevice) ForceUpdate() error {
 	log.Println("Initiating forced update")
+
 	t := time.Now()
+
 	r, err := d.GetDevice()
 	if err != nil {
 		return err
 	}
+
 	fakeUpdate := PubsubUpdate{}
 	fakeUpdate.Timestamp = t
 	fakeUpdate.ResourceUpdate.Traits = r
+
 	d.UpdateTraits(fakeUpdate)
+
 	return nil
 }
 
 func (d *EmulatedDevice) UpdateTraits(t PubsubUpdate) {
 	d.Lock()
 	defer d.Unlock()
+
 	ts := t.Timestamp
 	if t.ResourceUpdate.Traits.CurrMode.Status != "" && ts.After(d.state.CurrMode.Timestamp) {
 		d.state.CurrMode.Status = t.ResourceUpdate.Traits.CurrMode.Status
@@ -352,30 +376,35 @@ func (d *EmulatedDevice) UpdateTraits(t PubsubUpdate) {
 		d.CurrentHeatingCoolingState.SetValue(d.CurrentHVACMode())
 		log.Println("Current mode updated to", d.state.CurrMode.Status)
 	}
+
 	if t.ResourceUpdate.Traits.SetMode.Mode != "" && ts.After(d.state.SetMode.Timestamp) {
 		d.state.SetMode.Mode = t.ResourceUpdate.Traits.SetMode.Mode
 		d.state.SetMode.Timestamp = ts
 		d.TargetHeatingCoolingState.SetValue(d.TargetMode())
 		log.Println("Set mode updated to", d.state.SetMode.Mode)
 	}
+
 	if t.ResourceUpdate.Traits.SetTemp.HeatCelsius != 0 && ts.After(d.state.SetTemp.HeatTimestamp) {
 		d.state.SetTemp.HeatCelsius = t.ResourceUpdate.Traits.SetTemp.HeatCelsius
 		d.state.SetTemp.HeatTimestamp = ts
 		d.TargetTemperature.SetValue(d.TargetTemp())
 		log.Println("Set heat temperature updated to", d.state.SetTemp.HeatCelsius)
 	}
+
 	if t.ResourceUpdate.Traits.SetTemp.CoolCelsius != 0 && ts.After(d.state.SetTemp.CoolTimestamp) {
 		d.state.SetTemp.CoolCelsius = t.ResourceUpdate.Traits.SetTemp.CoolCelsius
 		d.state.SetTemp.CoolTimestamp = ts
 		d.TargetTemperature.SetValue(d.TargetTemp())
 		log.Println("Set cool temperature updated to", d.state.SetTemp.CoolCelsius)
 	}
+
 	if t.ResourceUpdate.Traits.CurrTemp.TempCelsius != 0 && ts.After(d.state.CurrTemp.Timestamp) {
 		d.state.CurrTemp.TempCelsius = t.ResourceUpdate.Traits.CurrTemp.TempCelsius
 		d.state.CurrTemp.Timestamp = ts
 		d.CurrentTemperature.SetValue(d.CurrentTemp())
 		log.Println("Current temperature updated to", d.state.CurrTemp.TempCelsius)
 	}
+
 	if t.ResourceUpdate.Traits.DisplayUnit.Unit != "" && ts.After(d.state.DisplayUnit.Timestamp) {
 		d.state.DisplayUnit.Unit = t.ResourceUpdate.Traits.DisplayUnit.Unit
 		d.state.DisplayUnit.Timestamp = ts

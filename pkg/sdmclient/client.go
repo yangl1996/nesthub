@@ -40,13 +40,14 @@ type DeviceTraits struct {
 
 func (d *DeviceEndpoint) GetDevice() (DeviceTraits, error) {
 	res, err := d.Enterprises.Devices.Get(d.Name).Do()
+
 	var r DeviceTraits
 	if err != nil {
-		return r, fmt.Errorf("failed to get device: %v", err)
+		return r, fmt.Errorf("failed to get device: %w", err)
 	}
 
 	if err := json.Unmarshal(res.Traits, &r); err != nil {
-		return r, fmt.Errorf("failed to unmarshal device traits: %v", err)
+		return r, fmt.Errorf("failed to unmarshal device traits: %w", err)
 	}
 
 	return r, nil
@@ -56,20 +57,25 @@ func (d *DeviceEndpoint) SetMode(mode string) error {
 	type params struct {
 		Mode string `json:"mode"`
 	}
+
 	p := params{
 		Mode: mode,
 	}
+
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return fmt.Errorf("failed to marshal mode params: %v", err)
+		return fmt.Errorf("failed to marshal mode params: %w", err)
 	}
+
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatMode.SetMode",
 		Params:  ep,
 	}
+
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return fmt.Errorf("failed to set mode: %v", err)
+		return fmt.Errorf("failed to set mode: %w", err)
 	}
+
 	return nil
 }
 
@@ -77,20 +83,25 @@ func (d *DeviceEndpoint) SetHeat(temp float64) error {
 	type params struct {
 		Temp float64 `json:"heatCelsius"`
 	}
+
 	p := params{
 		Temp: temp,
 	}
+
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return fmt.Errorf("failed to marshal heat params: %v", err)
+		return fmt.Errorf("failed to marshal heat params: %w", err)
 	}
+
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetHeat",
 		Params:  ep,
 	}
+
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return fmt.Errorf("failed to set heat: %v", err)
+		return fmt.Errorf("failed to set heat: %w", err)
 	}
+
 	return nil
 }
 
@@ -98,20 +109,25 @@ func (d *DeviceEndpoint) SetCool(temp float64) error {
 	type params struct {
 		Temp float64 `json:"coolCelsius"`
 	}
+
 	p := params{
 		Temp: temp,
 	}
+
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return fmt.Errorf("failed to marshal cool params: %v", err)
+		return fmt.Errorf("failed to marshal cool params: %w", err)
 	}
+
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetCool",
 		Params:  ep,
 	}
+
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return fmt.Errorf("failed to set cool: %v", err)
+		return fmt.Errorf("failed to set cool: %w", err)
 	}
+
 	return nil
 }
 
@@ -120,20 +136,25 @@ func (d *DeviceEndpoint) SetHeatCool(heat, cool float64) error {
 		Heat float64 `json:"heatCelsius"`
 		Cool float64 `json:"coolCelsius"`
 	}
+
 	p := params{
 		Heat: heat,
 		Cool: cool,
 	}
+
 	ep, err := json.Marshal(p)
 	if err != nil {
-		return fmt.Errorf("failed to marshal heatcool params: %v", err)
+		return fmt.Errorf("failed to marshal heatcool params: %w", err)
 	}
+
 	req := &sdm.GoogleHomeEnterpriseSdmV1ExecuteDeviceCommandRequest{
 		Command: "sdm.devices.commands.ThermostatTemperatureSetpoint.SetRange",
 		Params:  ep,
 	}
+
 	if _, err := d.Enterprises.Devices.ExecuteCommand(d.Name, req).Do(); err != nil {
-		return fmt.Errorf("failed to set heatcool: %v", err)
+		return fmt.Errorf("failed to set heatcool: %w", err)
 	}
+
 	return nil
 }

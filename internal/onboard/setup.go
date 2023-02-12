@@ -2,11 +2,10 @@ package onboard
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
+	"net/url"
 	"sync"
 	"time"
 
@@ -16,89 +15,125 @@ import (
 	su "google.golang.org/api/serviceusage/v1"
 )
 
-func Setup(config config.Config) error {
-	ctx := context.Background()
-	log.Println("Enabling Smart Device Management API")
-	// init config for service usage API
-	s, err := su.NewService(ctx, option.WithCredentialsFile(config.ServiceAccountKey))
+func SvcEnabled(ctx context.Context, cfg *config.Config, svcName string) error {
+	s, err := su.NewService(ctx, option.WithCredentialsFile(cfg.ServiceAccountKey))
 	if err != nil {
-		return fmt.Errorf("failed to create Google Service Usage API client: %v", err)
+		return fmt.Errorf("failed to create Service Usage client: %w", err)
 	}
 
-	// create the request
+	parent := fmt.Sprintf("projects/%s", cfg.GCPProjectID)
+	svc := fmt.Sprintf("%s/services/%s", parent, svcName)
+
+	resp, err := s.Services.BatchGet(parent).Names(svc).Do()
+	if err != nil {
+		return fmt.Errorf("failed to get the status of service %s: %w", svcName, err)
+	}
+
+	for _, svc := range resp.Services {
+		if svc.Name == svcName && svc.State != "ENABLED" {
+			return helpers.ErrSvcNotEnabled
+		}
+	}
+
+	return nil
+}
+
+func EnableSvc(ctx context.Context, cfg *config.Config, svcName string) error {
+	log.Printf("Enabling service %s", svcName)
+
+	s, err := su.NewService(ctx, option.WithCredentialsFile(cfg.ServiceAccountKey))
+	if err != nil {
+		return fmt.Errorf("failed to create Service Usage client: %w", err)
+	}
+
 	req := &su.BatchEnableServicesRequest{
-		ServiceIds: []string{"smartdevicemanagement.googleapis.com"},
-	}
-	op, err := s.Services.BatchEnable("projects/"+config.GCPProjectID, req).Do()
-	if err != nil {
-		return fmt.Errorf("failed to enable the following Google services %v: %v", req.ServiceIds, err)
+		ServiceIds: []string{svcName},
 	}
 
-	// poll the operation to wait for the result
+	op, err := s.Services.BatchEnable("projects/"+cfg.GCPProjectID, req).Do()
+	if err != nil {
+		return fmt.Errorf("failed to enable the service %s: %w", svcName, err)
+	}
+
 	for {
 		if op.Done {
 			if op.Error == nil {
 				break
 			} else {
-				return fmt.Errorf("failed to enable the Smart Device Management API: %v", op.Error)
+				return fmt.Errorf("failed to enable the service %s: %v", svcName, op.Error)
 			}
 		} else {
 			time.Sleep(1 * time.Second)
-			log.Println("Waiting for the Smart Device Management API to be enabled...")
+			log.Println("Waiting for the service to be enabled...")
 			if op, err = s.Operations.Get(op.Name).Do(); err != nil {
-				return fmt.Errorf("failed to get state of Smart Device Management API Enablement operation %v: %v", op.Name, err)
+				return fmt.Errorf("failed to get status of service enablement %s: %w", op.Name, err)
 			}
 		}
 	}
 
-	// assume that the user has already created an oauth 2.0 client ID
-	authURL := "https://nestservices.google.com/partnerconnections/" + config.SDMProjectID + "/auth?redirect_uri=http://localhost:7979&access_type=offline&prompt=consent&client_id=" + config.OAuthClientID + "&response_type=code&scope=https://www.googleapis.com/auth/sdm.service"
-	authCode := ""
-	authDone := &sync.WaitGroup{}
-	authDone.Add(1)
-	defer authDone.Done()
+	log.Println("Service enabled")
 
-	// start the server to receive callback from the browser
+	return nil
+}
+
+func AuthorizeOAuthToken(ctx context.Context, cfg *config.Config) error {
+	log.Println("Authorizing oauth token")
+
+	authCode := ""
+	authURL := fmt.Sprintf(
+		"https://nestservices.google.com/partnerconnections/%s/auth?redirect_uri=%s&access_type=offline&prompt=consent&client_id=%s&response_type=code&scope=https://www.googleapis.com/auth/sdm.service",
+		cfg.SDMProjectID,
+		cfg.SetupRedirectUri,
+		cfg.OAuthClientID,
+	)
+
+	authDone := &sync.WaitGroup{}
+
+	u, err := url.Parse(cfg.SetupRedirectUri)
+	if err != nil {
+		return fmt.Errorf("error parsing redirect uri: %w", err)
+	}
+
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		keys := r.URL.Query()
+
 		authCode = keys.Get("code")
 		if len(authCode) == 0 {
 			fmt.Fprintf(w, "Bad redirect.")
 		}
+
 		fmt.Fprintf(w, "Successful authorization. Please go back to Terminal.")
+
+		authDone.Done()
 	}
+
 	srv := &http.Server{
-		Addr:              ":7979",
+		Addr:              fmt.Sprintf(":%s", u.Port()),
 		ReadHeaderTimeout: 1 * time.Second,
 	}
+
 	http.HandleFunc("/", handler)
+
+	// start the server to receive callback from the browser
 	go srv.ListenAndServe() //nolint:errcheck
 
-	// let the user login
+	// send user to the browser to authorize the token
 	if err := helpers.OpenURL(authURL); err != nil {
-		return fmt.Errorf("failed to open browser: %v", err)
+		return fmt.Errorf("failed to open browser: %w", err)
 	}
 
 	// wait for authorization to finish
+	authDone.Add(1)
 	authDone.Wait()
-	if err := srv.Shutdown(context.Background()); err != nil {
-		return fmt.Errorf("failed to shutdown the server: %v", err)
-	}
-	log.Println("Authorization successful.", authCode)
 
-	// exchange to obtain the token
-	oauthConfig := config.OauthConfig()
-	token, err := oauthConfig.Exchange(ctx, authCode)
-	if err != nil {
-		return fmt.Errorf("failed to convert authorization code into a token: %v", err)
-	}
-	tokenJson, err := json.Marshal(token)
-	if err != nil {
-		return fmt.Errorf("failed to marshal token: %v", err)
+	if err := srv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("failed to shutdown the server: %w", err)
 	}
 
-	if err := os.WriteFile(config.OAuthToken, tokenJson, 0600); err != nil {
-		return fmt.Errorf("failed to write token to file %s: %v", config.OAuthToken, err)
+	log.Println("Authorization successful")
+
+	if err := cfg.WriteOAuthTokenToFile(authCode, cfg.OAuthTokenPath); err != nil {
+		return err
 	}
 
 	return nil

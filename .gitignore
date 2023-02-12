@@ -5,3 +5,4 @@ oauth.json
 Nest Hub
 credential.json
 .vscode
+bin/

@@ -39,8 +39,8 @@ Cons:
        After "Back to dashboard", click "Publish".
    3. Go back to https://console.cloud.google.com/apis/credentials, click
        "CREATE CREDENTIALS" and choose OAuth Client ID.
-   4. Choose "Web application" as the application type. Add
-       "http://localhost:7979" as redirect URI at the bottom of the page.
+   4. Choose "Web application" as the application type. If you configured a `SetupRedirectUri`
+       Add it to the redirect URI at the bottom of the page, otherwise use "http://localhost:7979"
    5. Copy and save the client ID and the client secret.
 4. Create a Smart Device Management project.
    1. Go to https://console.nest.google.com/device-access and click Create.
