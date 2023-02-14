@@ -99,8 +99,24 @@ Cons:
 ## Networking and Firewall Rules
 If you're configuring a firewall, you can set the TCP port used by Nesthub in the config. By default the application will choose an open port on start. You'll also need to leave UDP 5353 open for mDNS queries.
 
+## Example Config
+```json
+{
+    "SDMProjectID": "SDMP_PROJECT_ID",
+    "GCPProjectID": "GCP_PROJECT_ID",
+    "OAuthClientID": "CLIENT_ID.apps.googleusercontent.com",
+    "OAuthClientSecret": "CLIENT_SECRET",
+    "OAuthToken": "/etc/nesthub/oathtoken.json",
+    "ServiceAccountKey": "/etc/nesthub/service-account.json",
+    "HubName": "Nesthub",
+    "PairingCode": "77887788",
+    "Address": ":12345", // optional
+    "StoragePath": "/etc/nesthub/data"
+}
+```
+
 ## Acknowledgements
 
-This project uses hc for a pure-go implementation of the HomeKit Accessory
-Protocol. hc is authored by Matthias Hochgatterer and other contributors.
+This project uses hap for a pure-go implementation of the HomeKit Accessory
+Protocol. hap is authored by Matthias Hochgatterer and other contributors.
 

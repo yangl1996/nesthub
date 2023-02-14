@@ -75,7 +75,7 @@ func main() {
 	}
 
 	server.Pin = cfg.PairingCode
-	// server.Addr = cfg.Address
+	server.Addr = cfg.Address
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
