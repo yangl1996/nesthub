@@ -32,8 +32,8 @@ type Config struct {
 	// PairingCode is the 8 digit pairing code
 	PairingCode string `json:"PairingCode,omitempty"`
 
-	// Port is the port that homekit will connect to
-	Port string `json:"Port,omitempty"`
+	// Address is the host:port combintion that homekit will connect to, optional
+	Address string `json:"Address,omitempty"`
 
 	// StoragePath is the filepath where connection data is stored
 	StoragePath string `json:"StoragePath,omitempty"`

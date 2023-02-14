@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/brutella/hc/service"
+	"github.com/brutella/hap/service"
 	"github.com/yangl1996/nesthub/internal/config"
 	"github.com/yangl1996/nesthub/pkg/sdmclient"
 	"google.golang.org/api/option"
@@ -76,11 +77,9 @@ func NewEmulatedDevice(ctx context.Context, c *config.Config, t *service.Thermos
 		return nil, err
 	}
 
-	sub := pc.Subscription("homebridge-pubsub")
-
 	// initialize the structure
 	e := &EmulatedDevice{
-		sub:            sub,
+		sub:            pc.Subscription("homebridge-pubsub"),
 		Mutex:          &sync.Mutex{},
 		DeviceEndpoint: de,
 		Thermostat:     t,
@@ -136,60 +135,82 @@ func (d *EmulatedDevice) SetupHandlers() {
 	// Off is 0, Heat is 1, Cool is 2, Auto is 3
 	// https://developer.apple.com/documentation/homekit/hmcharacteristicvalueheatingcooling
 	// Note that TargetHeatingCoolingState can be 0-3, but CurrentHeatingCoolingState
-	// can only be 0-2, because "Auto" is not an actual statd.
+	// can only be 0-2, because "Auto" is not an actual state.
 	// https://github.com/homebridge/HAP-NodeJS/issues/815
 	// Reported values must always be in Celsius
 	// Another good reference of all those stuff is
-	// https://github.com/brutella/hc/blob/master/gen/metadata.json
-	d.TargetTemperature.OnValueRemoteGet(func() float64 {
+	// https://github.com/brutella/hap/blob/master/gen/metadata.json
+	d.TargetTemperature.ValueRequestFunc = func(*http.Request) (interface{}, int) {
 		// depends on the set mode
 		d.Lock()
 		defer d.Unlock()
-		return d.TargetTemp()
-	})
+
+		temp := d.TargetTemp()
+
+		return temp, 0
+	}
 
 	d.TargetTemperature.OnValueRemoteUpdate(func(n float64) {
-		log.Println("Request: set target temp to", n)
+		// TODO: Set temp in hap as well as SDM to prevent HomeKit delay?
 		if err := d.SetTargetTemp(n); err != nil {
-			log.Println(err)
+			log.Println("HomeKit: Error updating target temperature:", err)
+			return
 		}
+
+		log.Println("HomeKit: Target temperature updated to", n)
 	})
 
-	d.CurrentTemperature.OnValueRemoteGet(func() float64 {
+	d.CurrentTemperature.ValueRequestFunc = func(*http.Request) (interface{}, int) {
 		d.Lock()
 		defer d.Unlock()
-		return d.CurrentTemp()
-	})
 
-	d.TemperatureDisplayUnits.OnValueRemoteGet(func() int {
+		temp := d.CurrentTemp()
+
+		return temp, 0
+	}
+
+	d.TemperatureDisplayUnits.ValueRequestFunc = func(*http.Request) (interface{}, int) {
 		d.Lock()
 		defer d.Unlock()
-		return d.DisplayUnit()
-	})
+
+		unit := d.DisplayUnit()
+
+		return unit, 0
+	}
+
 	/*
 		// SDM does not support changing the display unit
 		d.TemperatureDisplayUnits.OnValueRemoteUpdate(func(n int) {
 		})
 	*/
 
-	d.TargetHeatingCoolingState.OnValueRemoteGet(func() int {
+	d.TargetHeatingCoolingState.ValueRequestFunc = func(*http.Request) (interface{}, int) {
 		d.Lock()
 		defer d.Unlock()
-		return d.TargetMode()
-	})
+
+		mode := d.TargetMode()
+
+		return mode, 0
+	}
 
 	d.TargetHeatingCoolingState.OnValueRemoteUpdate(func(n int) {
-		log.Println("Request: set target mode to", n)
+		// TODO: Set mode in hap as well as SDM to prevent HomeKit delay?
 		if err := d.SetTargetMode(n); err != nil {
-			log.Println(err)
+			log.Println("HomeKit: Error updating target mode:", err)
+			return
 		}
+
+		log.Println("HomeKit: Target mode updated to", n)
 	})
 
-	d.CurrentHeatingCoolingState.OnValueRemoteGet(func() int {
+	d.CurrentHeatingCoolingState.ValueRequestFunc = func(*http.Request) (interface{}, int) {
 		d.Lock()
 		defer d.Unlock()
-		return d.CurrentHVACMode()
-	})
+
+		mode := d.CurrentMode()
+
+		return mode, 0
+	}
 }
 
 func (d *EmulatedDevice) CurrentTemp() float64 {
@@ -197,22 +218,22 @@ func (d *EmulatedDevice) CurrentTemp() float64 {
 }
 
 func (d *EmulatedDevice) TargetTemp() float64 {
-	mode := d.state.SetMode.Mode
+	mode := d.state.TargetMode.Mode
 	switch mode {
 	case OFF:
 		return 0
 	case HEAT:
-		return d.state.SetTemp.HeatCelsius
+		return d.state.TargetTemp.HeatCelsius
 	case COOL:
-		return d.state.SetTemp.CoolCelsius
+		return d.state.TargetTemp.CoolCelsius
 	case HEATCOOL:
-		return (d.state.SetTemp.HeatCelsius + d.state.SetTemp.CoolCelsius) / 2.0
+		return (d.state.TargetTemp.HeatCelsius + d.state.TargetTemp.CoolCelsius) / 2.0
 	default:
 		panic("unreachable set mode when querying target temp")
 	}
 }
 
-func (d *EmulatedDevice) CurrentHVACMode() int {
+func (d *EmulatedDevice) CurrentMode() int {
 	mode := d.state.CurrMode.Status
 	switch mode {
 	case OFF:
@@ -227,7 +248,7 @@ func (d *EmulatedDevice) CurrentHVACMode() int {
 }
 
 func (d *EmulatedDevice) TargetMode() int {
-	mode := d.state.SetMode.Mode
+	mode := d.state.TargetMode.Mode
 	switch mode {
 	case OFF:
 		return 0
@@ -243,78 +264,35 @@ func (d *EmulatedDevice) TargetMode() int {
 }
 
 func (d *EmulatedDevice) SetTargetMode(n int) error {
-	var s string
-
 	switch n {
 	case 0:
-		s = OFF
+		return d.SetMode(OFF)
 	case 1:
-		s = HEAT
+		return d.SetMode(HEAT)
 	case 2:
-		s = COOL
+		return d.SetMode(COOL)
 	case 3:
-		s = HEATCOOL
+		return d.SetMode(HEATCOOL)
 	default:
+		// TODO handle error
 		panic("unreachable target mode enumeration")
 	}
-
-	if err := d.SetMode(s); err != nil {
-		return err
-	}
-
-	d.Lock()
-	defer d.Unlock()
-
-	log.Println("Setting target mode to", s)
-
-	d.state.SetMode.Mode = s
-	d.state.SetMode.Timestamp = time.Now()
-
-	return nil
 }
 
 func (d *EmulatedDevice) SetTargetTemp(t float64) error {
-	var err error
-
-	switch d.state.SetMode.Mode {
+	switch d.state.TargetMode.Mode {
 	case OFF:
-		err = nil
-	case HEAT:
-		err = d.SetHeat(t)
+		return nil // don't update timestamp for the OFF case
 	case COOL:
-		err = d.SetCool(t)
+		return d.SetCool(t)
+	case HEAT:
+		return d.SetHeat(t)
 	case HEATCOOL:
-		err = d.SetHeatCool(t-2.5, t+2.5)
+		return d.SetHeatCool(t-2.5, t+2.5)
 	default:
+		// TODO handle error
 		panic("unreachable target mode when setting target temp")
 	}
-
-	if err != nil {
-		return err
-	}
-
-	d.Lock()
-	defer d.Unlock()
-
-	log.Println("Setting target temp to", t)
-
-	switch d.state.SetMode.Mode {
-	case HEAT:
-		d.state.SetTemp.HeatCelsius = t
-		d.state.SetTemp.HeatTimestamp = time.Now()
-	case COOL:
-		d.state.SetTemp.CoolCelsius = t
-		d.state.SetTemp.CoolTimestamp = time.Now()
-	case HEATCOOL:
-		d.state.SetTemp.HeatCelsius = t - 2.5
-		d.state.SetTemp.CoolCelsius = t + 2.5
-		d.state.SetTemp.HeatTimestamp = time.Now()
-		d.state.SetTemp.CoolTimestamp = time.Now()
-	default:
-		return nil // don't update timestamp for the OFF case
-	}
-
-	return nil
 }
 
 func (d *EmulatedDevice) DisplayUnit() int {
@@ -370,45 +348,84 @@ func (d *EmulatedDevice) UpdateTraits(t PubsubUpdate) {
 	defer d.Unlock()
 
 	ts := t.Timestamp
-	if t.ResourceUpdate.Traits.CurrMode.Status != "" && ts.After(d.state.CurrMode.Timestamp) {
+	if sDiff(t.ResourceUpdate.Traits.CurrMode.Status, d.state.CurrMode.Status) && ts.After(d.state.CurrMode.Timestamp) {
 		d.state.CurrMode.Status = t.ResourceUpdate.Traits.CurrMode.Status
 		d.state.CurrMode.Timestamp = ts
-		d.CurrentHeatingCoolingState.SetValue(d.CurrentHVACMode())
-		log.Println("Current mode updated to", d.state.CurrMode.Status)
+
+		if err := d.CurrentHeatingCoolingState.SetValue(d.CurrentMode()); err != nil {
+			log.Println("Nest: Error updating current mode:", err)
+			return
+		}
+
+		log.Println("Nest: Current mode updated to", d.state.CurrMode.Status)
 	}
 
-	if t.ResourceUpdate.Traits.SetMode.Mode != "" && ts.After(d.state.SetMode.Timestamp) {
-		d.state.SetMode.Mode = t.ResourceUpdate.Traits.SetMode.Mode
-		d.state.SetMode.Timestamp = ts
-		d.TargetHeatingCoolingState.SetValue(d.TargetMode())
-		log.Println("Set mode updated to", d.state.SetMode.Mode)
-	}
-
-	if t.ResourceUpdate.Traits.SetTemp.HeatCelsius != 0 && ts.After(d.state.SetTemp.HeatTimestamp) {
-		d.state.SetTemp.HeatCelsius = t.ResourceUpdate.Traits.SetTemp.HeatCelsius
-		d.state.SetTemp.HeatTimestamp = ts
-		d.TargetTemperature.SetValue(d.TargetTemp())
-		log.Println("Set heat temperature updated to", d.state.SetTemp.HeatCelsius)
-	}
-
-	if t.ResourceUpdate.Traits.SetTemp.CoolCelsius != 0 && ts.After(d.state.SetTemp.CoolTimestamp) {
-		d.state.SetTemp.CoolCelsius = t.ResourceUpdate.Traits.SetTemp.CoolCelsius
-		d.state.SetTemp.CoolTimestamp = ts
-		d.TargetTemperature.SetValue(d.TargetTemp())
-		log.Println("Set cool temperature updated to", d.state.SetTemp.CoolCelsius)
-	}
-
-	if t.ResourceUpdate.Traits.CurrTemp.TempCelsius != 0 && ts.After(d.state.CurrTemp.Timestamp) {
+	if fDiff(t.ResourceUpdate.Traits.CurrTemp.TempCelsius, d.state.CurrTemp.TempCelsius) && ts.After(d.state.CurrTemp.Timestamp) {
 		d.state.CurrTemp.TempCelsius = t.ResourceUpdate.Traits.CurrTemp.TempCelsius
 		d.state.CurrTemp.Timestamp = ts
+
 		d.CurrentTemperature.SetValue(d.CurrentTemp())
-		log.Println("Current temperature updated to", d.state.CurrTemp.TempCelsius)
+
+		log.Println("Nest: Current temperature updated to", d.state.CurrTemp.TempCelsius)
 	}
 
-	if t.ResourceUpdate.Traits.DisplayUnit.Unit != "" && ts.After(d.state.DisplayUnit.Timestamp) {
+	if sDiff(t.ResourceUpdate.Traits.DisplayUnit.Unit, d.state.DisplayUnit.Unit) && ts.After(d.state.DisplayUnit.Timestamp) {
 		d.state.DisplayUnit.Unit = t.ResourceUpdate.Traits.DisplayUnit.Unit
 		d.state.DisplayUnit.Timestamp = ts
-		d.TemperatureDisplayUnits.SetValue(d.DisplayUnit())
-		log.Println("Display unit updated to", d.state.DisplayUnit.Unit)
+
+		if err := d.TemperatureDisplayUnits.SetValue(d.DisplayUnit()); err != nil {
+			log.Println("Nest: Error updating display units:", err)
+			return
+		}
+
+		log.Println("Nest: Display unit updated to", d.state.DisplayUnit.Unit)
 	}
+
+	// TODO(nateinaction): Add support for humidity
+	// if t.ResourceUpdate.Traits.Humidity.Percent != 0 && ts.After(d.state.Humidity.Timestamp) {
+	// 	d.state.Humidity.Percent = t.ResourceUpdate.Traits.Humidity.Percent
+	// 	d.state.Humidity.Timestamp = ts
+	// 	d.CurrentRelativeHumidity.SetValue(d.Humidity())
+	// 	log.Println("Humidity updated to", d.state.Humidity.Percent)
+	// }
+
+	if sDiff(t.ResourceUpdate.Traits.TargetMode.Mode, d.state.TargetMode.Mode) && ts.After(d.state.TargetMode.Timestamp) {
+		d.state.TargetMode.Mode = t.ResourceUpdate.Traits.TargetMode.Mode
+		d.state.TargetMode.Timestamp = ts
+
+		if err := d.TargetHeatingCoolingState.SetValue(d.TargetMode()); err != nil {
+			log.Println("Nest: Error updating target mode:", err)
+			return
+		}
+
+		log.Println("Nest: Target mode updated to", d.state.TargetMode.Mode)
+	}
+
+	if fDiff(t.ResourceUpdate.Traits.TargetTemp.CoolCelsius, d.state.TargetTemp.CoolCelsius) && ts.After(d.state.TargetTemp.CoolTimestamp) {
+		d.state.TargetTemp.CoolCelsius = t.ResourceUpdate.Traits.TargetTemp.CoolCelsius
+		d.state.TargetTemp.CoolTimestamp = ts
+
+		d.TargetTemperature.SetValue(d.TargetTemp())
+
+		log.Println("Nest: Target cool temperature updated to", d.state.TargetTemp.CoolCelsius)
+	}
+
+	if fDiff(t.ResourceUpdate.Traits.TargetTemp.HeatCelsius, d.state.TargetTemp.HeatCelsius) && ts.After(d.state.TargetTemp.HeatTimestamp) {
+		d.state.TargetTemp.HeatCelsius = t.ResourceUpdate.Traits.TargetTemp.HeatCelsius
+		d.state.TargetTemp.HeatTimestamp = ts
+
+		d.TargetTemperature.SetValue(d.TargetTemp())
+
+		log.Println("Nest: Target heat temperature updated to", d.state.TargetTemp.HeatCelsius)
+	}
+}
+
+// fDiff returns true if the floats are different and the new float is non-zero
+func fDiff(new, old float64) bool {
+	return new != 0 && new != old
+}
+
+// sDiff returns true if the strings are different and the new string is non-empty
+func sDiff(new, old string) bool {
+	return new != "" && new != old
 }

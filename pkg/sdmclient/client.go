@@ -18,16 +18,6 @@ type DeviceTraits struct {
 		Status    string
 		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.ThermostatHvac"`
-	SetMode struct {
-		Mode      string
-		Timestamp time.Time `json:"-"`
-	} `json:"sdm.devices.traits.ThermostatMode"`
-	SetTemp struct {
-		HeatCelsius   float64
-		CoolCelsius   float64
-		HeatTimestamp time.Time `json:"-"`
-		CoolTimestamp time.Time `json:"-"`
-	} `json:"sdm.devices.traits.ThermostatTemperatureSetpoint"`
 	CurrTemp struct {
 		TempCelsius float64   `json:"ambientTemperatureCelsius"`
 		Timestamp   time.Time `json:"-"`
@@ -36,6 +26,21 @@ type DeviceTraits struct {
 		Unit      string    `json:"temperatureScale"`
 		Timestamp time.Time `json:"-"`
 	} `json:"sdm.devices.traits.Settings"`
+	// TODO(nateinaction): Add support for humidity
+	// Humidity struct {
+	// 	Percent   float64   `json:"ambientHumidityPercent"`
+	// 	Timestamp time.Time `json:"-"`
+	// } `json:"sdm.devices.traits.Humidity"`
+	TargetMode struct {
+		Mode      string
+		Timestamp time.Time `json:"-"`
+	} `json:"sdm.devices.traits.ThermostatMode"`
+	TargetTemp struct {
+		HeatCelsius   float64
+		CoolCelsius   float64
+		HeatTimestamp time.Time `json:"-"`
+		CoolTimestamp time.Time `json:"-"`
+	} `json:"sdm.devices.traits.ThermostatTemperatureSetpoint"`
 }
 
 func (d *DeviceEndpoint) GetDevice() (DeviceTraits, error) {

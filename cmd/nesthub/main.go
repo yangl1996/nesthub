@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/brutella/hc"
-	"github.com/brutella/hc/accessory"
-	"github.com/brutella/hc/service"
+	"github.com/brutella/hap"
+	"github.com/brutella/hap/accessory"
+	"github.com/brutella/hap/service"
 	"github.com/yangl1996/nesthub/internal/config"
 	"github.com/yangl1996/nesthub/internal/helpers"
 	"github.com/yangl1996/nesthub/internal/onboard"
@@ -49,38 +53,41 @@ func main() {
 		}
 	}
 
-	svc := service.NewThermostat()
-	if _, err := emulation.NewEmulatedDevice(ctx, cfg, svc); err != nil {
+	s := service.NewThermostat()
+	a := accessory.NewBridge(accessory.Info{
+		Name:         cfg.HubName,
+		Manufacturer: "github.com/yangl1996/nesthub",
+	})
+
+	a.AddS(s.S)
+
+	if _, err := emulation.NewEmulatedDevice(ctx, cfg, s); err != nil {
 		log.Fatalf("failed to create emulated device: %s", err)
 	}
 
 	log.Println("Device emulation started")
 
-	// init the bridge device
-	info := accessory.Info{
-		Name:         cfg.HubName,
-		Manufacturer: "github.com/yangl1996/nesthub",
-	}
-	acc := accessory.NewBridge(info)
+	fs := hap.NewFsStore(cfg.StoragePath)
 
-	// add the service to the bridge
-	acc.AddService(svc.Service)
-
-	t, err := hc.NewIPTransport(
-		hc.Config{
-			Pin:         cfg.PairingCode,
-			StoragePath: cfg.StoragePath,
-			Port:        cfg.Port,
-		},
-		acc.Accessory,
-	)
+	server, err := hap.NewServer(fs, a.A)
 	if err != nil {
 		log.Fatalf("failed to start transport: %s", err)
 	}
 
-	hc.OnTermination(func() {
-		<-t.Stop()
-	})
+	server.Pin = cfg.PairingCode
+	// server.Addr = cfg.Address
 
-	t.Start()
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		<-c
+		signal.Stop(c)
+		cancel()
+	}()
+
+	// Run the server
+	fmt.Printf("Server exited: %s\n", server.ListenAndServe(ctx))
 }
