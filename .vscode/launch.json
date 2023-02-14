@@ -4,22 +4,16 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Run Nesthub",
             "type": "go",
             "request": "launch",
             "mode": "debug",
-            "program": "./"
-        },
-        {
-            "name": "Setup Nesthub",
-            "type": "go",
-            "request": "launch",
-            "mode": "debug",
-            "program": "./",
+            "program": "./cmd/nesthub/main.go",
             "args": [
-                "-setup"
-            ],
+                "-config=../../config.json"
+            ]
         }
     ]
 }

@@ -1,0 +1,32 @@
+run:
+  timeout: 15m
+linters:
+  # Defaults linters https://golangci-lint.run/usage/linters/#enabled-by-default
+  enable:
+    - dupl
+    - errcheck
+    - errorlint
+    - gci
+    - gochecknoglobals
+    - gocognit
+    - goconst
+    - gocritic
+    - gofmt
+    - gofumpt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - maintidx
+    - misspell
+    - paralleltest
+    - prealloc
+    - staticcheck
+    - tparallel
+    - typecheck
+    - unparam
+    - unused
+    - usestdlibvars
+    - whitespace
+    - wsl

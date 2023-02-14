@@ -1,7 +1,8 @@
-nesthub
+/nesthub
 config.json
 oauth.json
 *.swp
 Nest Hub
 credential.json
 .vscode
+bin/
